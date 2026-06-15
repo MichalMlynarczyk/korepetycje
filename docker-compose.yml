@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: korepetycje
+      POSTGRES_USER: korepetycje
+      POSTGRES_PASSWORD: korepetycje_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U korepetycje -d korepetycje"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py shell -c \"from django.contrib.auth import get_user_model; from django.contrib.auth.models import Group; User=get_user_model(); group,_=Group.objects.get_or_create(name='teacher'); user,_=User.objects.get_or_create(username='kuba@admin.com', defaults={'email':'kuba@admin.com','first_name':'Kuba'}); user.email='kuba@admin.com'; user.first_name='Kuba'; user.set_password('admin123'); user.save(); user.groups.add(group)\" &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    environment:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: dev-docker-change-me
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      POSTGRES_DB: korepetycje
+      POSTGRES_USER: korepetycje
+      POSTGRES_PASSWORD: korepetycje_dev_password
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://127.0.0.1:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_media:
