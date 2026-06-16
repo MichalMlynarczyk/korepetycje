@@ -4,22 +4,15 @@ import { Header } from './sections/Header.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { StudentPage } from './pages/StudentPage.jsx';
 import { TeacherPage } from './pages/TeacherPage.jsx';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
-
-function getCookie(name) {
-  return document.cookie
-    .split('; ')
-    .find((row) => row.startsWith(`${name}=`))
-    ?.split('=')[1];
-}
+import { API_BASE_URL } from './api.js';
 
 async function getCsrfToken() {
-  await fetch(`${API_BASE_URL}/api/auth/csrf/`, {
+  const response = await fetch(`${API_BASE_URL}/api/auth/csrf/`, {
     credentials: 'include',
   });
+  const data = await response.json();
 
-  return decodeURIComponent(getCookie('csrftoken') ?? '');
+  return data.csrfToken;
 }
 
 function App() {

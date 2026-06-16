@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../api.js';
 
 const navItems = [
   { label: 'Jak to działa', href: '#jak-to-dziala' },
@@ -8,31 +9,38 @@ const navItems = [
   { label: 'Kontakt', href: '#kontakt' },
 ];
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+async function getCsrfToken() {
+  const response = await fetch(`${API_BASE_URL}/api/auth/csrf/`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
 
-function getCookie(name) {
-  return document.cookie
-    .split('; ')
-    .find((row) => row.startsWith(`${name}=`))
-    ?.split('=')[1];
+  return data.csrfToken;
+}
+
+async function parseJsonResponse(response) {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    return {};
+  }
+
+  return response.json();
 }
 
 async function authRequest(path, payload) {
-  await fetch(`${API_BASE_URL}/api/auth/csrf/`, {
-    credentials: 'include',
-  });
+  const csrfToken = await getCsrfToken();
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': decodeURIComponent(getCookie('csrftoken') ?? ''),
+      'X-CSRFToken': csrfToken,
     },
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
+  const data = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(data.error ?? 'Coś poszło nie tak. Spróbuj ponownie.');
   }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../api.js';
 
 const tabs = [
   { id: 'calendar', label: 'Kalendarz', icon: 'calendar' },
@@ -7,22 +8,10 @@ const tabs = [
   { id: 'notes', label: 'Notatki i pliki', icon: 'file' },
 ];
 
-const availableSlots = [
-  { tutor: 'Kuba', subject: 'Matematyka rozszerzona', day: 'Poniedziałek', date: '24 czerwca', time: '17:00', duration: '60 min' },
-  { tutor: 'Hubert', subject: 'Geometria i podstawa', day: 'Wtorek', date: '25 czerwca', time: '18:30', duration: '60 min' },
-  { tutor: 'Kuba', subject: 'Fizyka', day: 'Czwartek', date: '27 czerwca', time: '16:00', duration: '90 min' },
-];
-
 const paymentPlans = [
   { name: 'START', price: 99, lessons: '1 lekcja tygodniowo', total: '396 zł / miesiąc' },
   { name: 'PLUS', price: 89, lessons: '2 lekcje tygodniowo', total: '712 zł / miesiąc', active: true },
   { name: 'INTENSIV', price: 79, lessons: '3 lekcje tygodniowo', total: '948 zł / miesiąc' },
-];
-
-const messages = [
-  { author: 'Kuba', text: 'Cześć! Wrzuciłem notatkę z funkcji kwadratowej. Przerób zadania 1-4 przed kolejną lekcją.', time: '10:24' },
-  { author: 'Ty', text: 'Super, dzięki. Zadanie 3 sprawdzę jeszcze raz, bo nie jestem pewien delty.', time: '10:31', own: true },
-  { author: 'Kuba', text: 'Jasne, przy następnym spotkaniu przejdziemy to krok po kroku.', time: '10:33' },
 ];
 
 const files = [
@@ -30,6 +19,136 @@ const files = [
   { name: 'Geometria - zadania do powtórki.pdf', tutor: 'Hubert', date: '16 czerwca', size: '840 KB' },
   { name: 'Plan przygotowania do matury.docx', tutor: 'Kuba', date: '12 czerwca', size: '320 KB' },
 ];
+
+const calendarPastDays = 14;
+const calendarFutureDays = 28;
+const chatRefreshMs = 5000;
+const hours = ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+const dayLabels = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Niedz'];
+
+function slotKey(date, startTime) {
+  return `${date}-${startTime}`;
+}
+
+function parseLocalDate(isoDate) {
+  return new Date(`${isoDate}T12:00:00`);
+}
+
+function formatIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function getWeekStart(date = new Date()) {
+  const nextDate = new Date(date);
+  const day = nextDate.getDay() || 7;
+  nextDate.setDate(nextDate.getDate() - day + 1);
+  nextDate.setHours(12, 0, 0, 0);
+  return nextDate;
+}
+
+function getWeekDays(weekStart) {
+  return dayLabels.map((label, index) => {
+    const date = addDays(weekStart, index);
+    return {
+      label,
+      date: String(date.getDate()),
+      isoDate: formatIsoDate(date),
+    };
+  });
+}
+
+function isPastSlot(slot) {
+  return new Date(`${slot.date}T${slot.start_time}:00`) <= new Date();
+}
+
+function isPastSlotTime(isoDate, startTime) {
+  return new Date(`${isoDate}T${startTime}:00`) <= new Date();
+}
+
+function formatWeekRange(weekStart) {
+  const firstDay = weekStart;
+  const lastDay = addDays(weekStart, 6);
+  const formatter = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' });
+
+  return `${formatter.format(firstDay)} - ${formatter.format(lastDay)}`;
+}
+
+async function fetchCalendarSlots(weekStart) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/calendar/?week_start=${formatIsoDate(weekStart)}`, {
+    credentials: 'include',
+  });
+  const contentType = response.headers.get('content-type') ?? '';
+  const data = contentType.includes('application/json') ? await response.json() : {};
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Nie udało się pobrać kalendarza.');
+  }
+
+  return data.slots;
+}
+
+async function fetchTeachers() {
+  const response = await fetch(`${API_BASE_URL}/api/auth/teachers/`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Nie udało się pobrać listy korepetytorów.');
+  }
+
+  return data.teachers;
+}
+
+async function fetchStudentChatMessages(teacherId) {
+  const query = teacherId ? `?teacher_id=${teacherId}` : '';
+  const response = await fetch(`${API_BASE_URL}/api/auth/chat/${query}`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Nie udało się pobrać czatu.');
+  }
+
+  return data;
+}
+
+async function sendStudentChatMessage(teacherId, body) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/chat/`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ teacher_id: teacherId, body }),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Nie udało się wysłać wiadomości.');
+  }
+
+  return data;
+}
+
+function formatSlotDate(isoDate) {
+  const date = new Date(`${isoDate}T12:00:00`);
+  return new Intl.DateTimeFormat('pl-PL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(date);
+}
 
 export function StudentPage({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('calendar');
@@ -60,7 +179,7 @@ export function StudentPage({ user, onLogout }) {
         <StudentTabs activeTab={activeTab} onChange={setActiveTab} />
 
         <div className="mt-8">
-          {activeTab === 'calendar' && <CalendarPanel />}
+          {activeTab === 'calendar' && <CalendarPanel user={user} />}
           {activeTab === 'payments' && <PaymentsPanel />}
           {activeTab === 'chat' && <ChatPanel />}
           {activeTab === 'notes' && <NotesPanel />}
@@ -136,52 +255,278 @@ function StudentTabs({ activeTab, onChange }) {
   );
 }
 
-function CalendarPanel() {
+function CalendarPanel({ user }) {
+  const [weekStart, setWeekStart] = useState(getWeekStart());
+  const [slots, setSlots] = useState([]);
+  const [status, setStatus] = useState({ type: null, message: '' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [bookingSlotId, setBookingSlotId] = useState(null);
+  const [slotToConfirm, setSlotToConfirm] = useState(null);
+  const slotMap = Object.fromEntries(
+    slots.map((slot) => [slotKey(slot.date, slot.start_time), slot]),
+  );
+  const rejectedSlot = slots.find((slot) => slot.rejected_student?.id === user?.id);
+  const nextBookedSlot = slots.find((slot) => slot.status === 'booked' && slot.student?.id === user?.id);
+  const weekDays = getWeekDays(weekStart);
+  const minWeekStart = getWeekStart(addDays(new Date(), -calendarPastDays));
+  const maxWeekStart = getWeekStart(addDays(new Date(), calendarFutureDays));
+  const canGoPrevious = weekStart > minWeekStart;
+  const canGoNext = weekStart < maxWeekStart;
+
+  const loadSlots = async () => {
+    setIsLoading(true);
+    try {
+      const nextSlots = await fetchCalendarSlots(weekStart);
+      setSlots(nextSlots);
+      setStatus({ type: null, message: '' });
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSlots();
+  }, [weekStart]);
+
+  const moveWeek = (direction) => {
+    setWeekStart((currentWeekStart) => addDays(currentWeekStart, direction * 7));
+  };
+
+  const bookSlot = async (slotId) => {
+    setBookingSlotId(slotId);
+    setStatus({ type: null, message: '' });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/calendar/book/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slot_id: slotId }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Nie udało się zarezerwować terminu.');
+      }
+
+      setStatus({ type: 'success', message: 'Termin oczekuje na akceptację przez korepetytora.' });
+      const nextSlots = await fetchCalendarSlots(weekStart);
+      setSlots(nextSlots);
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    } finally {
+      setBookingSlotId(null);
+    }
+  };
+
+  const openBookingConfirm = (slot) => {
+    setSlotToConfirm(slot);
+  };
+
+  const confirmBooking = async () => {
+    if (!slotToConfirm) {
+      return;
+    }
+
+    await bookSlot(slotToConfirm.id);
+    setSlotToConfirm(null);
+  };
+
   return (
     <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
       <section className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-8">
-        <h2 className="text-2xl font-black text-slate-950">Dostępne terminy</h2>
-        <p className="mt-2 text-base font-medium text-slate-500">
-          Kafelki dodane przez korepetytorów. Docelowo kliknięcie zarezerwuje lekcję.
-        </p>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-slate-950">Kalendarz terminów</h2>
+            <p className="mt-2 text-base font-medium text-slate-500">
+              Kliknij wolny termin udostępniony przez korepetytora, aby zarezerwować lekcję.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={!canGoPrevious}
+              onClick={() => moveWeek(-1)}
+              className="rounded-md border-2 border-slate-300 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Poprzedni tydzień
+            </button>
+            <p className="min-w-[14rem] text-center text-sm font-black text-slate-700">
+              {formatWeekRange(weekStart)}
+            </p>
+            <button
+              type="button"
+              disabled={!canGoNext}
+              onClick={() => moveWeek(1)}
+              className="rounded-md border-2 border-slate-300 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Następny tydzień
+            </button>
+          </div>
+        </div>
 
-        <div className="mt-7 grid gap-4">
-          {availableSlots.map((slot) => (
-            <article key={`${slot.tutor}-${slot.date}-${slot.time}`} className="rounded-lg border border-zinc-200 bg-[#fcfaf7] px-5 py-5">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.22em] text-orange-600">
-                    {slot.day}, {slot.date}
-                  </p>
-                  <h3 className="mt-2 text-2xl font-black text-slate-950">{slot.time}</h3>
-                  <p className="mt-1 text-sm font-bold text-slate-500">
-                    {slot.duration} z {slot.tutorem}
-                  </p>
-                  <p className="mt-3 text-base font-semibold text-slate-600">{slot.subject}</p>
+        {status.message && (
+          <p
+            className={`mt-5 rounded-md px-4 py-3 text-sm font-bold ${
+              status.type === 'success' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'
+            }`}
+          >
+            {status.message}
+          </p>
+        )}
+
+        {rejectedSlot && (
+          <p className="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            Niestety korepetycje nie zostały zarezerwowane w dniu {formatSlotDate(rejectedSlot.date)}, godz. {rejectedSlot.start_time}. Spróbuj inny termin lub skonsultuj się z korepetytorem.
+          </p>
+        )}
+
+        <div className="mt-7 overflow-x-auto">
+          <div className="min-w-[860px] overflow-hidden rounded-xl border border-zinc-200">
+            <div className="grid grid-cols-[72px_repeat(7,1fr)] bg-[#f1eee8]">
+              <div className="border-r border-zinc-200 px-3 py-4" />
+              {weekDays.map((day) => {
+                const isPastDay = parseLocalDate(day.isoDate) < parseLocalDate(formatIsoDate(new Date()));
+
+                return (
+                  <div key={day.isoDate} className={`border-r border-zinc-200 px-3 py-4 text-center last:border-r-0 ${isPastDay ? 'bg-zinc-100 text-slate-400' : ''}`}>
+                    <p className={`text-base font-black ${isPastDay ? 'text-slate-400' : 'text-slate-800'}`}>{day.label}</p>
+                    <p className="text-sm font-bold text-slate-400">{day.date}</p>
+                    <span className={`mx-auto mt-2 block h-1.5 w-1.5 rounded-full ${isPastDay ? 'bg-slate-300' : 'bg-orange-600'}`} />
+                  </div>
+                );
+              })}
+            </div>
+
+            {hours.map((hour) => (
+              <div key={hour} className="grid min-h-[56px] grid-cols-[72px_repeat(7,1fr)] border-t border-zinc-200">
+                <div className="border-r border-zinc-200 bg-white px-3 py-4 text-sm font-semibold text-slate-400">
+                  {hour}
                 </div>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center rounded-md bg-orange-600 px-6 py-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700"
-                >
-                  Zarezerwuj
-                </button>
+                {weekDays.map((day) => {
+                  const startTime = hour.padStart(5, '0');
+                  const slot = slotMap[slotKey(day.isoDate, startTime)];
+                  const isRejectedForStudent = slot?.rejected_student?.id === user?.id;
+                  const isAvailable = slot?.status === 'available' && !isPastSlot(slot) && !isRejectedForStudent;
+                  const isPendingForStudent = slot?.status === 'pending' && slot.student?.id === user?.id;
+                  const isBookedForStudent = slot?.status === 'booked' && slot.student?.id === user?.id;
+                  const isPast = isPastSlotTime(day.isoDate, startTime);
+
+                  return (
+                    <button
+                      key={`${day.isoDate}-${startTime}`}
+                      type="button"
+                      disabled={!isAvailable || bookingSlotId === slot?.id || isLoading}
+                      title={
+                        isPendingForStudent
+                          ? 'Oczekiwanie na akceptację przez korepetytora'
+                          : isBookedForStudent
+                            ? 'Rezerwacja zaakceptowana'
+                            : undefined
+                      }
+                      onClick={() => isAvailable && openBookingConfirm(slot)}
+                      className={`min-h-[56px] border-r border-zinc-200 px-2 py-2 text-center text-xs font-black transition last:border-r-0 ${
+                        isAvailable
+                          ? 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                          : isPendingForStudent
+                            ? 'bg-orange-500 text-white hover:bg-orange-600'
+                          : isBookedForStudent
+                            ? 'bg-emerald-100 text-emerald-800'
+                          : isPast
+                            ? 'bg-zinc-100 text-slate-300'
+                            : 'bg-white text-transparent'
+                      } disabled:cursor-not-allowed`}
+                    >
+                      {isAvailable || isPendingForStudent || isBookedForStudent ? (
+                        bookingSlotId === slot.id
+                          ? 'Rezerwuję...'
+                          : `${hour.split(':')[0]}-${Number(hour.split(':')[0]) + 1}`
+                      ) : ''}
+                    </button>
+                  );
+                })}
               </div>
-            </article>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
+
+      {slotToConfirm && (
+        <ConfirmBookingModal
+          slot={slotToConfirm}
+          onCancel={() => setSlotToConfirm(null)}
+          onConfirm={confirmBooking}
+        />
+      )}
 
       <section className="rounded-xl bg-slate-950 px-6 py-7 text-white shadow-[0_16px_36px_rgba(39,40,45,0.12)] sm:px-8">
         <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-500">Najbliższa lekcja</p>
-        <h2 className="mt-4 text-3xl font-black">Wtorek, 18:30</h2>
+        <h2 className="mt-4 text-3xl font-black">
+          {nextBookedSlot ? `${formatSlotDate(nextBookedSlot.date)}, ${nextBookedSlot.start_time}` : 'Brak rezerwacji'}
+        </h2>
         <p className="mt-3 text-base font-medium leading-7 text-slate-300">
-          Matematyka podstawowa z Hubertem. Link do spotkania pojawi się 15 minut przed lekcją.
+          {nextBookedSlot
+            ? `Matematyka z ${nextBookedSlot.teacher.name}. Link do spotkania pojawi się 15 minut przed lekcją.`
+            : 'Zarezerwuj termin z listy, a pojawi się tutaj jako najbliższa lekcja.'}
         </p>
         <div className="mt-8 rounded-lg border border-white/10 bg-white/5 px-5 py-5">
           <p className="text-sm font-bold text-slate-400">Status</p>
-          <p className="mt-2 text-xl font-black text-orange-500">Zarezerwowana</p>
+          <p className="mt-2 text-xl font-black text-orange-500">
+            {nextBookedSlot ? 'Zarezerwowana' : 'Oczekuje na wybór'}
+          </p>
         </div>
       </section>
+    </div>
+  );
+}
+
+function ConfirmBookingModal({ slot, onCancel, onConfirm }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsSubmitting(true);
+    await onConfirm();
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 px-5 py-8 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.35)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h3 className="text-2xl font-black text-slate-950">Zarezerwować korepetycje?</h3>
+        <p className="mt-3 text-base font-semibold leading-7 text-slate-500">
+          Czy na pewno chcesz zarezerwować korepetycje na {formatSlotDate(slot.date)}, godz. {slot.start_time}?
+        </p>
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border-2 border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:border-slate-700"
+          >
+            Anuluj
+          </button>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={handleConfirm}
+            className="rounded-md bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-wait disabled:opacity-70"
+          >
+            {isSubmitting ? 'Wysyłam...' : 'Tak'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -240,23 +585,118 @@ function PaymentsPanel() {
 }
 
 function ChatPanel() {
+  const [teachers, setTeachers] = useState([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [draftMessage, setDraftMessage] = useState('');
+  const [status, setStatus] = useState({ type: null, message: '' });
+  const selectedTeacher = teachers.find((teacher) => teacher.id === selectedTeacherId) ?? null;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTeachers = () => {
+      fetchTeachers().then((teachersFromApi) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setTeachers(teachersFromApi);
+        setSelectedTeacherId((currentId) => {
+          if (teachersFromApi.some((teacher) => teacher.id === currentId)) {
+            return currentId;
+          }
+
+          return teachersFromApi[0]?.id ?? null;
+        });
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setStatus({ type: 'error', message: error.message });
+        }
+      });
+    };
+
+    loadTeachers();
+    const intervalId = window.setInterval(loadTeachers, chatRefreshMs);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTeacherId) {
+      setChatMessages([]);
+      return undefined;
+    }
+
+    let isMounted = true;
+    const loadMessages = () => {
+      fetchStudentChatMessages(selectedTeacherId).then((data) => {
+        if (isMounted) {
+          setChatMessages(data.messages);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setStatus({ type: 'error', message: error.message });
+        }
+      });
+    };
+
+    loadMessages();
+    const intervalId = window.setInterval(loadMessages, chatRefreshMs);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [selectedTeacherId]);
+
+  const handleSendMessage = async (event) => {
+    event.preventDefault();
+    if (!selectedTeacherId || !draftMessage.trim()) {
+      return;
+    }
+
+    try {
+      const data = await sendStudentChatMessage(selectedTeacherId, draftMessage.trim());
+      setChatMessages(data.messages);
+      setDraftMessage('');
+      setStatus({ type: null, message: '' });
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    }
+  };
+
   return (
     <section className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
       <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
         <h2 className="text-2xl font-black text-slate-950">Korepetytorzy</h2>
         <div className="mt-6 space-y-3">
-          {['Kuba', 'Hubert'].map((name) => (
+          {teachers.length === 0 && (
+            <p className="rounded-lg bg-[#fcfaf7] px-4 py-4 text-sm font-bold text-slate-500">
+              Brak korepetytorów w bazie.
+            </p>
+          )}
+
+          {teachers.map((teacher) => (
             <button
-              key={name}
+              key={teacher.id}
               type="button"
-              className="flex w-full items-center gap-4 rounded-lg bg-[#fcfaf7] px-4 py-4 text-left transition hover:bg-orange-50"
+              onClick={() => setSelectedTeacherId(teacher.id)}
+              className={`flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left transition ${
+                teacher.id === selectedTeacherId ? 'bg-orange-50' : 'bg-[#fcfaf7] hover:bg-orange-50'
+              }`}
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-lg font-black text-white">
-                {name[0]}
+                {teacher.initial}
               </span>
-              <span>
-                <span className="block text-base font-black text-slate-950">{name}</span>
-                <span className="block text-sm font-semibold text-slate-500">Aktywny w panelu</span>
+              <span className="min-w-0">
+                <span className="block text-base font-black text-slate-950">{teacher.name}</span>
+                <span className="block truncate text-sm font-semibold text-slate-500">{teacher.last_message}</span>
               </span>
             </button>
           ))}
@@ -264,27 +704,45 @@ function ChatPanel() {
       </div>
 
       <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
-        <h2 className="text-2xl font-black text-slate-950">Czat z Kubą</h2>
+        <h2 className="text-2xl font-black text-slate-950">
+          {selectedTeacher ? `Czat z ${selectedTeacher.name}` : 'Czat'}
+        </h2>
+
+        {status.message && (
+          <p className="mt-5 rounded-md bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            {status.message}
+          </p>
+        )}
+
         <div className="mt-6 space-y-4">
-          {messages.map((message) => (
-            <div key={`${message.author}-${message.time}`} className={`flex ${message.own ? 'justify-end' : 'justify-start'}`}>
+          {selectedTeacher && chatMessages.length === 0 && (
+            <p className="rounded-lg bg-[#fcfaf7] px-5 py-5 text-sm font-bold text-slate-500">
+              Brak wiadomości.
+            </p>
+          )}
+
+          {chatMessages.map((message) => (
+            <div key={message.id} className={`flex ${message.own ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-xl rounded-xl px-5 py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
                 <p className="text-sm font-black">{message.author} · {message.time}</p>
-                <p className="mt-2 text-base font-medium leading-7">{message.text}</p>
+                <p className="mt-2 text-base font-medium leading-7">{message.body}</p>
               </div>
             </div>
           ))}
         </div>
-        <div className="mt-6 flex gap-3">
+        <form className="mt-6 flex gap-3" onSubmit={handleSendMessage}>
           <input
             type="text"
             placeholder="Napisz wiadomość..."
+            disabled={!selectedTeacher}
+            value={draftMessage}
+            onChange={(event) => setDraftMessage(event.target.value)}
             className="h-14 min-w-0 flex-1 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-5 text-base font-medium outline-none focus:border-orange-600 focus:bg-white"
           />
-          <button type="button" className="rounded-md bg-orange-600 px-6 text-sm font-black text-white transition hover:bg-orange-700">
+          <button type="submit" disabled={!selectedTeacher} className="rounded-md bg-orange-600 px-6 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">
             Wyślij
           </button>
-        </div>
+        </form>
       </div>
     </section>
   );

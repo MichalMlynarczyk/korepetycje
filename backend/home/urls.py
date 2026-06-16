@@ -9,4 +9,13 @@ urlpatterns = [
     path('register/', views.register, name='auth-register'),
     path('login/', views.login_view, name='auth-login'),
     path('logout/', views.logout_view, name='auth-logout'),
+    path('calendar/', views.calendar_slots, name='calendar-slots'),
+    path('calendar/toggle/', views.calendar_toggle_slot, name='calendar-toggle-slot'),
+    path('calendar/reserve/', views.calendar_teacher_reserve_slot, name='calendar-teacher-reserve-slot'),
+    path('calendar/decide/', views.calendar_decide_slot, name='calendar-decide-slot'),
+    path('calendar/book/', views.calendar_book_slot, name='calendar-book-slot'),
+    path('students/', views.students_list, name='students-list'),
+    path('teachers/', views.teachers_list, name='teachers-list'),
+    path('chat/', views.student_chat_messages, name='student-chat-messages'),
+    path('chat/<int:student_id>/', views.chat_messages, name='chat-messages'),
 ]
