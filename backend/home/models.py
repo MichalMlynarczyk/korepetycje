@@ -2,6 +2,10 @@ from django.conf import settings
 from django.db import models
 
 
+def student_material_upload_path(instance, filename):
+    return f'student-materials/student-{instance.student_id}/{filename}'
+
+
 class StudentProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -9,6 +13,7 @@ class StudentProfile(models.Model):
         related_name='student_profile',
     )
     full_name = models.CharField(max_length=160)
+    tokens = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,3 +97,29 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f'{self.created_at:%Y-%m-%d %H:%M} {self.body[:40]}'
+
+
+class StudentMaterial(models.Model):
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_materials',
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_materials',
+    )
+    title = models.CharField(max_length=180)
+    message = models.TextField(blank=True)
+    file = models.FileField(upload_to=student_material_upload_path)
+    original_filename = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=120)
+    size = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title

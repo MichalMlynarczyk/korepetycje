@@ -268,10 +268,10 @@ export function HomePage() {
             ))}
           </div>
 
-          <div className="relative mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-7xl items-center gap-12 px-6 py-14 sm:py-16 lg:px-10 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center gap-8 px-4 py-10 sm:min-h-[calc(100vh-6rem)] sm:gap-12 sm:px-6 sm:py-16 lg:px-10 xl:grid-cols-[1.05fr_0.95fr]">
             <div>
-              <div className="mb-8 inline-flex max-w-full flex-wrap items-center gap-3 rounded-full border border-orange-300 bg-white px-4 py-3 text-xs font-extrabold uppercase tracking-wide text-orange-600 shadow-[0_10px_28px_rgba(159,95,44,0.12)] sm:mb-10 sm:gap-4 sm:px-5 sm:text-sm">
-                <GraduationCapIcon className="h-5 w-5" />
+              <div className="mb-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-orange-300 bg-white px-3 py-2 text-[10px] font-extrabold uppercase tracking-wide text-orange-600 shadow-[0_10px_28px_rgba(159,95,44,0.12)] sm:mb-10 sm:gap-4 sm:px-5 sm:py-3 sm:text-sm">
+                <GraduationCapIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 <span>Klasa 1 SP</span>
                 <span>•</span>
                 <span>Matura</span>
@@ -279,18 +279,18 @@ export function HomePage() {
                 <span>5 lat doświadczenia</span>
               </div>
 
-              <h1 className="max-w-4xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950 sm:text-7xl lg:text-8xl">
+              <h1 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-normal text-slate-950 sm:text-7xl sm:leading-[0.98] lg:text-8xl">
                 Matematyka,
                 <br />
                 którą
                 <br />
                 <span className="relative inline-block text-orange-600">
                   rozumiesz
-                  <span className="absolute -bottom-2 left-2 h-3 w-[92%] rounded-full border-b-4 border-orange-300" />
+                  <span className="absolute -bottom-1 left-1 h-2 w-[92%] rounded-full border-b-4 border-orange-300 sm:-bottom-2 sm:left-2 sm:h-3" />
                 </span>
               </h1>
 
-              <p className="mt-8 max-w-2xl text-lg font-medium leading-8 text-slate-500 sm:mt-10 sm:text-xl sm:leading-9">
+              <p className="mt-6 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-10 sm:text-xl sm:leading-9">
                 Uczymy matematyki na poziomie od 1. klasy szkoły podstawowej do
                 klas maturalnych (podstawa i rozszerzenie). Mamy ponad 5 lat
                 doświadczenia i już ponad 40 zadowolonych uczniów pod naszą
@@ -298,20 +298,20 @@ export function HomePage() {
                 wyłącznie na logiczne myślenie.
               </p>
 
-              <div className="mt-10 flex flex-col gap-5 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-5">
                 <a
                   href="#kontakt"
-                  className="inline-flex items-center justify-center gap-4 rounded-md bg-orange-600 px-7 py-4 text-base font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.24)] transition hover:bg-orange-700 sm:gap-5 sm:px-9 sm:py-5 sm:text-lg"
+                  className="inline-flex items-center justify-center gap-3 rounded-md bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.24)] transition hover:bg-orange-700 sm:gap-5 sm:px-9 sm:py-5 sm:text-lg"
                 >
                   Zacznij teraz
-                  <ArrowRightIcon className="h-6 w-6" />
+                  <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </a>
                 <a
                   href="#jak-to-dziala"
-                  className="inline-flex items-center justify-center gap-4 rounded-md border-2 border-slate-500 bg-white px-7 py-4 text-base font-extrabold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:gap-5 sm:px-9 sm:py-5 sm:text-lg"
+                  className="inline-flex items-center justify-center gap-3 rounded-md border-2 border-slate-500 bg-white px-5 py-3 text-sm font-extrabold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:gap-5 sm:px-9 sm:py-5 sm:text-lg"
                 >
                   Jak to działa?
-                  <ArrowRightIcon className="h-6 w-6" />
+                  <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </a>
               </div>
             </div>
@@ -477,20 +477,20 @@ function StatIcon({ type, className }) {
 
 function HowToStart() {
   return (
-    <section id="jak-to-dziala" className="bg-orange-50 px-6 py-20 lg:px-10">
+    <section id="jak-to-dziala" className="bg-orange-50 px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <p className="text-sm font-black uppercase tracking-[0.45em] text-orange-600">
+        <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:text-sm sm:tracking-[0.45em]">
           Proces
         </p>
-        <h2 className="mt-5 text-5xl font-black leading-tight text-slate-950 sm:text-7xl">
+        <h2 className="mt-4 text-3xl font-black leading-tight text-slate-950 sm:mt-5 sm:text-7xl">
           Jak działamy
         </h2>
-        <p className="mt-6 max-w-2xl text-xl font-medium leading-9 text-slate-500">
+        <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-xl sm:leading-9">
           Prosty i skuteczny proces od pierwszego zgłoszenia do pełnego
           opanowania materiału.
         </p>
 
-        <div className="relative mt-16 grid gap-8 lg:grid-cols-4">
+        <div className="relative mt-9 grid gap-5 sm:mt-16 sm:gap-8 lg:grid-cols-4">
           <div className="absolute left-[11%] right-[11%] top-7 hidden border-t-2 border-dashed border-orange-200 lg:block" />
           {steps.map((step) => (
             <ProcessStep key={step.number} step={step} />
@@ -504,17 +504,17 @@ function HowToStart() {
 function ProcessStep({ step }) {
   return (
     <article className="relative text-center">
-      <div className="relative z-10 mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white shadow-[0_12px_26px_rgba(159,95,44,0.26)]">
+      <div className="relative z-10 mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-base font-black text-white shadow-[0_12px_26px_rgba(159,95,44,0.26)] sm:h-16 sm:w-16 sm:text-xl">
         {step.number}
       </div>
-      <div className="relative mt-8 min-h-[300px] rounded-xl border border-orange-100 bg-white/78 px-7 pb-9 pt-10 shadow-[0_18px_38px_rgba(39,40,45,0.06)]">
+      <div className="relative mt-5 rounded-xl border border-orange-100 bg-white/78 px-5 pb-6 pt-7 shadow-[0_18px_38px_rgba(39,40,45,0.06)] sm:mt-8 sm:min-h-[300px] sm:px-7 sm:pb-9 sm:pt-10">
         <span className="absolute -top-3 left-1/2 h-6 w-6 -translate-x-1/2 rotate-45 border-l border-t border-orange-100 bg-white/78" />
-        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-24 sm:w-24">
           <StepIcon type={step.icon} />
         </div>
-        <h3 className="mt-8 text-2xl font-extrabold text-slate-950">{step.title}</h3>
-        <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-orange-600" />
-        <p className="mx-auto mt-6 max-w-xs text-base font-medium leading-7 text-slate-500">
+        <h3 className="mt-5 text-xl font-extrabold text-slate-950 sm:mt-8 sm:text-2xl">{step.title}</h3>
+        <span className="mx-auto mt-4 block h-1 w-10 rounded-full bg-orange-600 sm:mt-5 sm:w-12" />
+        <p className="mx-auto mt-4 max-w-xs text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-base sm:leading-7">
           {step.text}
         </p>
       </div>
@@ -524,18 +524,18 @@ function ProcessStep({ step }) {
 
 function StepIcon({ type }) {
   if (type === 'chat') {
-    return <ChatBubblesIcon className="h-14 w-14" />;
+    return <ChatBubblesIcon className="h-10 w-10 sm:h-14 sm:w-14" />;
   }
 
   if (type === 'tutor') {
-    return <TutorCheckIcon className="h-14 w-14" />;
+    return <TutorCheckIcon className="h-10 w-10 sm:h-14 sm:w-14" />;
   }
 
   if (type === 'calendar') {
-    return <CalendarCheckIcon className="h-14 w-14" />;
+    return <CalendarCheckIcon className="h-10 w-10 sm:h-14 sm:w-14" />;
   }
 
-  return <ProgressScreenIcon className="h-14 w-14" />;
+  return <ProgressScreenIcon className="h-10 w-10 sm:h-14 sm:w-14" />;
 }
 
 function TutorCheckIcon({ className }) {
@@ -691,30 +691,30 @@ function WhyUs() {
   ];
 
   return (
-    <section id="dlaczego-my" className="bg-orange-50 pb-20 pt-12">
+    <section id="dlaczego-my" className="bg-orange-50 pb-12 pt-8 sm:pb-20 sm:pt-12">
       <div className="overflow-hidden bg-orange-50">
         <div className="mx-auto grid max-w-7xl lg:grid-cols-[0.92fr_1.08fr]">
-          <div className="px-6 py-12 sm:px-10 lg:px-14">
-            <p className="text-xs font-black uppercase tracking-[0.45em] text-orange-600">
+          <div className="px-4 py-9 sm:px-10 sm:py-12 lg:px-14">
+            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:tracking-[0.45em]">
               Badania i analizy
             </p>
-            <h2 className="mt-6 max-w-xl text-4xl font-black leading-tight text-slate-950 sm:text-5xl">
+            <h2 className="mt-4 max-w-xl text-3xl font-black leading-tight text-slate-950 sm:mt-6 sm:text-5xl">
               Dlaczego nauka indywidualna <span className="text-orange-600">działa?</span>
             </h2>
-            <span className="mt-6 block h-1 w-12 rounded-full bg-orange-600" />
-            <p className="mt-7 max-w-lg text-base font-medium leading-8 text-slate-600">
+            <span className="mt-5 block h-1 w-10 rounded-full bg-orange-600 sm:mt-6 sm:w-12" />
+            <p className="mt-5 max-w-lg text-sm font-medium leading-6 text-slate-600 sm:mt-7 sm:text-base sm:leading-8">
               W klasie liczącej 25-30 uczniów nauczyciel musi podzielić uwagę między wszystkich. Sprawdź, ile czasu realnie przypada na jedno dziecko podczas lekcji.
             </p>
-            <div className="mt-8 flex max-w-md items-center gap-4 rounded-full bg-orange-50 px-5 py-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-orange-600">
-                <UsersIcon className="h-7 w-7" />
+            <div className="mt-6 flex max-w-md items-center gap-3 rounded-full bg-orange-50 px-4 py-3 sm:mt-8 sm:gap-4 sm:px-5 sm:py-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-orange-600 sm:h-12 sm:w-12">
+                <UsersIcon className="h-6 w-6 sm:h-7 sm:w-7" />
               </span>
-              <p className="text-sm font-bold leading-6 text-slate-700">
+              <p className="text-xs font-bold leading-5 text-slate-700 sm:text-sm sm:leading-6">
                 Indywidualne podejście to większe zrozumienie, szybsze postępy i pewność siebie.
               </p>
             </div>
           </div>
-          <div className="relative min-h-[360px] overflow-hidden">
+          <div className="relative min-h-[240px] overflow-hidden sm:min-h-[360px]">
             <img
               src={individualLearningImage}
               alt="Korepetytorka pomaga uczniowi w rozwiązywaniu zadań z matematyki"
@@ -728,24 +728,24 @@ function WhyUs() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div id="symulator-uwagi" className="relative z-10 -mt-10 rounded-2xl border border-orange-100 bg-white px-6 py-8 shadow-[0_18px_42px_rgba(39,40,45,0.08)] sm:px-10 lg:px-14">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-              <StopwatchIcon className="h-9 w-9" />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+        <div id="symulator-uwagi" className="relative z-10 -mt-8 rounded-2xl border border-orange-100 bg-white px-4 py-6 shadow-[0_18px_42px_rgba(39,40,45,0.08)] sm:-mt-10 sm:px-10 sm:py-8 lg:px-14">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-16 sm:w-16">
+              <StopwatchIcon className="h-7 w-7 sm:h-9 sm:w-9" />
             </span>
             <div>
-              <h3 className="text-2xl font-black text-slate-950 sm:text-3xl">
+              <h3 className="text-xl font-black text-slate-950 sm:text-3xl">
                 Sprawdź ile czasu nauczyciel ma dla Twojego dziecka
               </h3>
-              <p className="mt-3 max-w-3xl text-base font-medium leading-7 text-slate-500">
+              <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500 sm:mt-3 sm:text-base sm:leading-7">
                 Użyj suwaka, aby wybrać wielkość klasy szkolnej. Zobacz, ile minut z 45-minutowej lekcji przypada statystycznie na jedno dziecko.
               </p>
             </div>
           </div>
 
-          <div className="mt-10">
-            <div className="mb-5 flex flex-col justify-between gap-3 text-base font-black text-slate-950 sm:flex-row sm:items-center">
+          <div className="mt-7 sm:mt-10">
+            <div className="mb-4 flex flex-col justify-between gap-2 text-sm font-black text-slate-950 sm:mb-5 sm:flex-row sm:items-center sm:gap-3 sm:text-base">
               <span>Liczba uczniów w klasie:</span>
               <span className="inline-flex items-center gap-3 text-orange-600">
                 <UsersIcon className="h-5 w-5" />
@@ -769,14 +769,14 @@ function WhyUs() {
               />
             </div>
 
-            <div className="grid items-stretch gap-6 lg:grid-cols-[1fr_auto_1fr]">
+            <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-[1fr_auto_1fr]">
               <TimeComparisonCard
                 eyebrow="Lekcja w szkole publicznej"
                 value={`${wholeMinutes} min ${seconds.toString().padStart(2, '0')} sek`}
                 text={`Twoje dziecko ma lekcji w ${classSize}-osobowej klasie.`}
               />
               <div className="flex items-center justify-center">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full border border-zinc-200 bg-white text-sm font-black uppercase text-slate-700">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-black uppercase text-slate-700 sm:h-14 sm:w-14 sm:text-sm">
                   vs
                 </span>
               </div>
@@ -796,29 +796,29 @@ function WhyUs() {
 
         <div className="grid gap-0 overflow-hidden rounded-b-2xl border-x border-b border-orange-100 bg-white shadow-[0_18px_42px_rgba(39,40,45,0.05)] sm:grid-cols-2 lg:grid-cols-5">
           {benefits.map((benefit) => (
-            <article key={benefit.title} className="border-b border-orange-100 px-7 py-12 text-center last:border-b-0 sm:border-r lg:border-b-0 lg:py-14">
-              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+            <article key={benefit.title} className="border-b border-orange-100 px-5 py-7 text-center last:border-b-0 sm:border-r sm:px-7 sm:py-12 lg:border-b-0 lg:py-14">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-16 sm:w-16">
                 {benefit.icon}
               </span>
-              <h3 className="mt-7 text-base font-black text-slate-950">{benefit.title}</h3>
-              <p className="mt-5 text-sm font-medium leading-6 text-slate-500">{benefit.text}</p>
+              <h3 className="mt-4 text-sm font-black text-slate-950 sm:mt-7 sm:text-base">{benefit.title}</h3>
+              <p className="mt-3 text-xs font-medium leading-5 text-slate-500 sm:mt-5 sm:text-sm sm:leading-6">{benefit.text}</p>
             </article>
           ))}
         </div>
 
-        <div className="mt-9 rounded-2xl border border-orange-100 bg-white px-7 py-7 shadow-[0_16px_34px_rgba(39,40,45,0.06)] sm:px-8">
+        <div className="mt-7 rounded-2xl border border-orange-100 bg-white px-5 py-6 shadow-[0_16px_34px_rgba(39,40,45,0.06)] sm:mt-9 sm:px-8 sm:py-7">
           <div className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
             <div className="flex flex-col items-center gap-5 sm:flex-row">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-                <TrophyIcon className="h-8 w-8" />
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-16 sm:w-16">
+                <TrophyIcon className="h-6 w-6 sm:h-8 sm:w-8" />
               </span>
-              <p className="text-xl font-bold text-slate-700">
-                <span className="text-3xl font-black text-orange-600">98%</span> uczniów osiąga lepsze wyniki dzięki korepetycjom indywidualnym 1:1.
+              <p className="text-base font-bold text-slate-700 sm:text-xl">
+                <span className="text-2xl font-black text-orange-600 sm:text-3xl">98%</span> uczniów osiąga lepsze wyniki dzięki korepetycjom indywidualnym 1:1.
               </p>
             </div>
             <a
               href="#kontakt"
-              className="inline-flex w-full items-center justify-center gap-4 rounded-md bg-orange-600 px-8 py-5 text-base font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:w-auto sm:gap-4 sm:px-8 sm:py-5 sm:text-base"
             >
               Umów lekcję próbną
               <ArrowRightIcon className="h-5 w-5" />
@@ -832,15 +832,15 @@ function WhyUs() {
 
 function TimeComparisonCard({ eyebrow, value, text, highlighted = false }) {
   return (
-    <article className={`rounded-lg border px-7 py-7 ${highlighted ? 'border-orange-200 bg-orange-50/40' : 'border-zinc-200 bg-white'}`}>
-      <p className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.28em] text-orange-600">
+    <article className={`rounded-lg border px-5 py-5 sm:px-7 sm:py-7 ${highlighted ? 'border-orange-200 bg-orange-50/40' : 'border-zinc-200 bg-white'}`}>
+      <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-orange-600 sm:gap-3 sm:text-xs sm:tracking-[0.28em]">
         {highlighted ? <GraduationCapIcon className="h-5 w-5" /> : <SchoolIcon className="h-5 w-5" />}
         {eyebrow}
       </p>
-      <p className={`mt-5 text-4xl font-black leading-none sm:text-5xl ${highlighted ? 'text-orange-600' : 'text-slate-950'}`}>
+      <p className={`mt-4 text-3xl font-black leading-none sm:mt-5 sm:text-5xl ${highlighted ? 'text-orange-600' : 'text-slate-950'}`}>
         {value}
       </p>
-      <p className="mt-4 max-w-md text-sm font-medium leading-6 text-slate-500">
+      <p className="mt-3 max-w-md text-xs font-medium leading-5 text-slate-500 sm:mt-4 sm:text-sm sm:leading-6">
         {text}
       </p>
     </article>
@@ -1339,30 +1339,30 @@ function PriceList() {
   const recommendation = recommendationMap[selectedGrade];
 
   return (
-    <section id="cennik" className="relative overflow-hidden bg-[#fcfaf7] px-6 py-20 lg:px-10">
+    <section id="cennik" className="relative overflow-hidden bg-[#fcfaf7] px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(159,95,44,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(159,95,44,0.07)_1px,transparent_1px)] bg-[size:28px_28px]" />
       <div className="absolute -left-28 top-20 h-80 w-80 rounded-full bg-orange-50/80 blur-3xl" />
       <div className="relative mx-auto max-w-7xl rounded-2xl border-2 border-orange-600/45 px-5 py-7 sm:px-8 sm:py-10 lg:px-10">
         <div className="relative overflow-hidden">
           <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-orange-100 blur-3xl" />
           <div className="relative">
-            <p className="text-sm font-black uppercase tracking-[0.45em] text-orange-600">
+            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:text-sm sm:tracking-[0.45em]">
               Cennik Pakiety
             </p>
-            <h2 className="mt-5 text-4xl font-black leading-tight text-slate-950 sm:text-6xl lg:text-7xl">
+            <h2 className="mt-4 text-3xl font-black leading-tight text-slate-950 sm:mt-5 sm:text-6xl lg:text-7xl">
               Elastyczne Pakiety Lekcyjne
             </h2>
-            <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-slate-500">
+            <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-lg sm:leading-8">
               Im więcej lekcji w tygodniu, tym niższa stawka za każdą godzinę.
               Bez długoterminowych umów - płacisz miesięcznie i rezygnujesz kiedy chcesz.
             </p>
 
-            <div className="mt-7 inline-flex max-w-full items-start gap-3 rounded-md bg-orange-50 px-5 py-3 text-sm font-semibold leading-6 text-slate-400 sm:items-center">
-              <InfoIcon className="h-5 w-5 shrink-0 text-orange-500" />
+            <div className="mt-5 inline-flex max-w-full items-start gap-2 rounded-md bg-orange-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-400 sm:mt-7 sm:items-center sm:gap-3 sm:px-5 sm:text-sm sm:leading-6">
+              <InfoIcon className="h-4 w-4 shrink-0 text-orange-500 sm:h-5 sm:w-5" />
               <span>Wszystkie ceny podane są w przeliczeniu na 60-minutowe zajęcia indywidualne.</span>
             </div>
 
-            <div className="mt-12 grid gap-8 xl:grid-cols-3">
+            <div className="mt-8 grid gap-5 sm:mt-12 sm:gap-8 xl:grid-cols-3">
               {packages.map((item) => (
                 <PricingCard key={item.name} item={item} />
               ))}
@@ -1371,19 +1371,19 @@ function PriceList() {
           </div>
         </div>
 
-        <div className="mt-16 rounded-2xl bg-white px-6 py-10 shadow-[0_18px_42px_rgba(15,23,42,0.08)] sm:px-12">
-          <h3 className="flex flex-col gap-4 text-lg font-black uppercase tracking-[0.14em] text-slate-950 sm:flex-row sm:items-center sm:gap-5 sm:text-xl sm:tracking-[0.18em]">
-            <ClockIcon className="h-9 w-9 text-orange-600" />
+        <div className="mt-10 rounded-2xl bg-white px-4 py-7 shadow-[0_18px_42px_rgba(15,23,42,0.08)] sm:mt-16 sm:px-12 sm:py-10">
+          <h3 className="flex flex-col gap-3 text-base font-black uppercase tracking-[0.1em] text-slate-950 sm:flex-row sm:items-center sm:gap-5 sm:text-xl sm:tracking-[0.18em]">
+            <ClockIcon className="h-7 w-7 text-orange-600 sm:h-9 sm:w-9" />
             Kalkulacja stawek godzinowych
           </h3>
-          <div className="mt-10 space-y-8">
+          <div className="mt-7 space-y-6 sm:mt-10 sm:space-y-8">
             {packages.map((item, index) => (
               <RateRow key={item.name} item={item} index={index} />
             ))}
           </div>
           <div className="mt-10 border-t border-zinc-200 pt-7">
-            <p className="flex gap-4 text-base font-medium leading-7 text-slate-400">
-              <InfoIcon className="mt-1 h-6 w-6 shrink-0 text-orange-500" />
+            <p className="flex gap-3 text-sm font-medium leading-6 text-slate-400 sm:gap-4 sm:text-base sm:leading-7">
+              <InfoIcon className="mt-1 h-5 w-5 shrink-0 text-orange-500 sm:h-6 sm:w-6" />
               <span>
                 Średnia rynkowa cena indywidualnych korepetycji na poziomie szkoły
                 średniej w aglomeracjach wynosi 110-160 zł/h. Nasze pakiety optymalizują Twój budżet.
@@ -1392,30 +1392,30 @@ function PriceList() {
           </div>
         </div>
 
-        <div className="mt-10 overflow-hidden rounded-2xl bg-slate-950 px-8 py-10 text-white shadow-[0_18px_42px_rgba(15,23,42,0.16)] lg:px-12">
+        <div className="mt-8 overflow-hidden rounded-2xl bg-slate-950 px-5 py-7 text-white shadow-[0_18px_42px_rgba(15,23,42,0.16)] sm:mt-10 sm:px-8 sm:py-10 lg:px-12">
           <div className="grid gap-10 lg:grid-cols-[1fr_1px_1fr] lg:items-center">
             <div>
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <TargetIcon className="h-14 w-14 text-orange-600" />
-                <h3 className="text-3xl font-black leading-tight">
+                <TargetIcon className="h-10 w-10 text-orange-600 sm:h-14 sm:w-14" />
+                <h3 className="text-2xl font-black leading-tight sm:text-3xl">
                   Dobierz idealny pakiet
                   <br />
                   dla dziecka
                 </h3>
               </div>
-              <p className="mt-7 max-w-md text-lg font-medium leading-8 text-slate-300">
+              <p className="mt-4 max-w-md text-sm font-medium leading-6 text-slate-300 sm:mt-7 sm:text-lg sm:leading-8">
                 Wybierz aktualną sytuację edukacyjną i cel, a nasz algorytm dobierze plan.
               </p>
 
-              <div className="mt-8 space-y-6">
+              <div className="mt-6 space-y-5 sm:mt-8 sm:space-y-6">
                 <label className="block">
-                  <span className="mb-3 block text-base font-bold text-slate-300">
+                  <span className="mb-2 block text-sm font-bold text-slate-300 sm:mb-3 sm:text-base">
                     Aktualne oceny dziecka:
                   </span>
                   <select
                     value={selectedGrade}
                     onChange={(event) => setSelectedGrade(event.target.value)}
-                    className="w-full rounded-md bg-white px-5 py-4 text-base font-semibold text-slate-700 outline-none"
+                    className="w-full rounded-md bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none sm:px-5 sm:py-4 sm:text-base"
                   >
                     {Object.keys(recommendationMap).map((grade) => (
                       <option key={grade}>{grade}</option>
@@ -1424,13 +1424,13 @@ function PriceList() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-3 block text-base font-bold text-slate-300">
+                  <span className="mb-2 block text-sm font-bold text-slate-300 sm:mb-3 sm:text-base">
                     Twój cel nauczania:
                   </span>
                   <select
                     value={selectedGoal}
                     onChange={(event) => setSelectedGoal(event.target.value)}
-                    className="w-full rounded-md bg-white px-5 py-4 text-base font-semibold text-slate-700 outline-none"
+                    className="w-full rounded-md bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none sm:px-5 sm:py-4 sm:text-base"
                   >
                     <option>Bieżąca pomoc / spokój przy lekcjach</option>
                     <option>Poprawa ocen i pewności siebie</option>
@@ -1448,40 +1448,40 @@ function PriceList() {
 
             <div className="hidden h-full w-px bg-slate-700 lg:block" />
 
-            <article className="rounded-xl border border-slate-700 bg-white/5 px-8 py-8">
-              <span className="inline-flex items-center gap-2 rounded bg-orange-600 px-4 py-2 text-sm font-black uppercase tracking-wide">
+            <article className="rounded-xl border border-slate-700 bg-white/5 px-5 py-6 sm:px-8 sm:py-8">
+              <span className="inline-flex items-center gap-2 rounded bg-orange-600 px-3 py-1.5 text-xs font-black uppercase tracking-wide sm:px-4 sm:py-2 sm:text-sm">
                 <StarIcon className="h-4 w-4" />
                 Rekomendacja
               </span>
-              <p className="mt-7 text-base font-semibold text-slate-300">
+              <p className="mt-5 text-sm font-semibold text-slate-300 sm:mt-7 sm:text-base">
                 Najlepszy wybór dla Ciebie
               </p>
-              <h3 className="mt-4 text-4xl font-black text-orange-600">
+              <h3 className="mt-3 text-3xl font-black text-orange-600 sm:mt-4 sm:text-4xl">
                 {recommendation.title}
               </h3>
-              <p className="mt-6 max-w-md text-lg font-medium leading-8 text-slate-300">
+              <p className="mt-4 max-w-md text-sm font-medium leading-6 text-slate-300 sm:mt-6 sm:text-lg sm:leading-8">
                 {recommendation.description}
               </p>
               <div className="mt-8 border-t border-slate-700 pt-7">
-                <p className="text-base font-semibold text-slate-400">
+                <p className="text-sm font-semibold text-slate-400 sm:text-base">
                   Sugerowany korepetytor:
                 </p>
-                <div className="mt-4 flex items-center gap-4">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black">
+                <div className="mt-3 flex items-center gap-3 sm:mt-4 sm:gap-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-lg font-black sm:h-12 sm:w-12 sm:text-xl">
                     {recommendation.tutor[0]}
                   </span>
                   <div>
-                    <p className="text-lg font-black">{recommendation.tutor}</p>
-                    <p className="text-base font-medium text-slate-300">{recommendation.subject}</p>
+                    <p className="text-base font-black sm:text-lg">{recommendation.tutor}</p>
+                    <p className="text-sm font-medium text-slate-300 sm:text-base">{recommendation.subject}</p>
                   </div>
                 </div>
               </div>
               <a
                 href="#kontakt"
-                className="mt-8 inline-flex w-full items-center justify-center gap-5 rounded-md bg-orange-600 px-8 py-5 text-lg font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700"
+                className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:mt-8 sm:gap-5 sm:px-8 sm:py-5 sm:text-lg"
               >
                 Wybieram ten pakiet
-                <ArrowRightIcon className="h-6 w-6" />
+                <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </a>
               <p className="sr-only">Wybrany cel nauczania: {selectedGoal}</p>
             </article>
@@ -1497,7 +1497,7 @@ function PricingCard({ item }) {
 
   return (
     <article
-      className={`relative flex h-full flex-col rounded-xl border px-6 py-10 shadow-[0_14px_32px_rgba(15,23,42,0.08)] sm:px-8 ${
+      className={`relative flex h-full flex-col rounded-xl border px-5 py-7 shadow-[0_14px_32px_rgba(15,23,42,0.08)] sm:px-8 sm:py-10 ${
         isPopular
           ? 'border-orange-600 bg-slate-950 text-white'
           : 'border-zinc-200 bg-white text-slate-950'
@@ -1509,30 +1509,30 @@ function PricingCard({ item }) {
           Najpopularniejszy
         </div>
       )}
-      <p className={`text-sm font-black uppercase tracking-[0.2em] ${isPopular ? 'text-orange-500' : 'text-slate-700'}`}>
+      <p className={`text-xs font-black uppercase tracking-[0.18em] sm:text-sm sm:tracking-[0.2em] ${isPopular ? 'text-orange-500' : 'text-slate-700'}`}>
         {item.name}
       </p>
-      <div className="mt-5 flex items-end gap-3">
-        <span className="text-7xl font-black leading-none">{item.price}</span>
-        <span className="mb-3 text-2xl font-black">zł</span>
+      <div className="mt-4 flex items-end gap-2 sm:mt-5 sm:gap-3">
+        <span className="text-5xl font-black leading-none sm:text-7xl">{item.price}</span>
+        <span className="mb-2 text-xl font-black sm:mb-3 sm:text-2xl">zł</span>
       </div>
-      <p className={`mt-3 text-base font-bold ${isPopular ? 'text-slate-300' : 'text-slate-500'}`}>
+      <p className={`mt-2 text-sm font-bold sm:mt-3 sm:text-base ${isPopular ? 'text-slate-300' : 'text-slate-500'}`}>
         za godzinę ・ {item.frequency}
       </p>
-      <p className={`mt-7 border-b pb-6 text-base font-bold ${isPopular ? 'border-slate-700 text-slate-400' : 'border-zinc-200 text-slate-400'}`}>
+      <p className={`mt-5 border-b pb-5 text-sm font-bold sm:mt-7 sm:pb-6 sm:text-base ${isPopular ? 'border-slate-700 text-slate-400' : 'border-zinc-200 text-slate-400'}`}>
         {item.monthly}
       </p>
-      <ul className="mt-7 flex-1 space-y-5">
+      <ul className="mt-5 flex-1 space-y-3 sm:mt-7 sm:space-y-5">
         {item.features.map((feature) => (
-          <li key={feature} className={`flex gap-3 text-base font-bold leading-6 ${isPopular ? 'text-slate-300' : 'text-slate-600'}`}>
-            <CheckCircleIcon className="mt-0.5 h-6 w-6 shrink-0 text-orange-500" />
+          <li key={feature} className={`flex gap-2 text-sm font-bold leading-5 sm:gap-3 sm:text-base sm:leading-6 ${isPopular ? 'text-slate-300' : 'text-slate-600'}`}>
+            <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-orange-500 sm:h-6 sm:w-6" />
             <span>{feature}</span>
           </li>
         ))}
       </ul>
       <a
         href="#kontakt"
-        className={`mt-10 inline-flex w-full items-center justify-center gap-4 rounded-md px-5 py-4 text-sm font-black transition sm:gap-5 sm:px-6 sm:text-base ${
+        className={`mt-7 inline-flex w-full items-center justify-center gap-3 rounded-md px-4 py-3.5 text-xs font-black transition sm:mt-10 sm:gap-5 sm:px-6 sm:py-4 sm:text-base ${
           isPopular
             ? 'bg-orange-600 text-white hover:bg-orange-700'
             : 'border-2 border-slate-700 text-slate-950 hover:border-slate-950'
@@ -1551,13 +1551,13 @@ function RateRow({ item, index }) {
   const textColors = ['text-slate-950', 'text-orange-600', 'text-emerald-600'];
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[90px_110px_1fr_90px] xl:items-center">
-      <p className="text-xl font-black text-slate-950">{item.name}</p>
-      <p className="text-lg font-semibold text-slate-400">{index + 1}h tydzień</p>
-      <div className="h-4 overflow-hidden rounded-full bg-zinc-100">
+    <div className="grid gap-3 sm:gap-4 xl:grid-cols-[90px_110px_1fr_90px] xl:items-center">
+      <p className="text-base font-black text-slate-950 sm:text-xl">{item.name}</p>
+      <p className="text-sm font-semibold text-slate-400 sm:text-lg">{index + 1}h tydzień</p>
+      <div className="h-3 overflow-hidden rounded-full bg-zinc-100 sm:h-4">
         <div className={`h-full rounded-full ${colors[index]}`} style={{ width: widths[index] }} />
       </div>
-      <p className={`text-left text-xl font-black xl:text-right ${textColors[index]}`}>{item.price} zł/h</p>
+      <p className={`text-left text-base font-black sm:text-xl xl:text-right ${textColors[index]}`}>{item.price} zł/h</p>
     </div>
   );
 }
@@ -1577,22 +1577,22 @@ function Benefit({ icon, text }) {
 function Corepetitors(){
   return (
     <section id="korepetytorzy" className="bg-orange-50">
-      <div className="relative overflow-hidden bg-[#fcfaf7] px-6 py-20 lg:px-10">
+      <div className="relative overflow-hidden bg-[#fcfaf7] px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(159,95,44,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(159,95,44,0.07)_1px,transparent_1px)] bg-[size:28px_28px]" />
         <div className="absolute -right-28 top-14 h-80 w-80 rounded-full bg-orange-50/80 blur-3xl" />
         <div className="relative mx-auto max-w-7xl rounded-2xl border-2 border-orange-600/45 px-5 py-7 sm:px-8 sm:py-10 lg:px-10">
-          <p className="text-sm font-black uppercase tracking-[0.45em] text-orange-600">
+          <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:text-sm sm:tracking-[0.45em]">
             Korepetytorzy
           </p>
-          <h2 className="mt-5 text-4xl font-black leading-tight text-slate-950 sm:text-6xl lg:text-7xl">
+          <h2 className="mt-4 text-3xl font-black leading-tight text-slate-950 sm:mt-5 sm:text-6xl lg:text-7xl">
             Poznaj swoich <span className="text-orange-600">korepetytorów</span>
           </h2>
-          <p className="mt-6 max-w-3xl text-xl font-medium leading-9 text-slate-500">
+          <p className="mt-4 max-w-3xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-xl sm:leading-9">
             Kuba i Hubert to studenci Politechniki, którzy tłumaczą matematykę
             prostym językiem - od podstawówki po maturę.
           </p>
 
-          <div className="mt-12 grid gap-8 xl:grid-cols-2">
+          <div className="mt-8 grid gap-5 sm:mt-12 sm:gap-8 xl:grid-cols-2">
             {tutorProfiles.map((profile) => (
               <TutorProfileCard key={profile.name} profile={profile} />
             ))}
@@ -1632,51 +1632,51 @@ function TutorProfileCard({ profile }) {
       };
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-orange-100 bg-white px-6 py-7 shadow-[0_18px_42px_rgba(39,40,45,0.06)] sm:px-8 sm:py-8">
+    <article className="relative overflow-hidden rounded-2xl border border-orange-100 bg-white px-5 py-6 shadow-[0_18px_42px_rgba(39,40,45,0.06)] sm:px-8 sm:py-8">
       <div className="absolute right-7 top-7 hidden grid-cols-5 gap-3 sm:grid">
         {Array.from({ length: 25 }).map((_, index) => (
           <span key={index} className="h-1.5 w-1.5 rounded-full bg-orange-100" />
         ))}
       </div>
 
-      <div className="relative flex flex-col gap-7 sm:flex-row sm:items-center">
-        <span className="flex h-36 w-36 shrink-0 items-center justify-center rounded-full bg-orange-50 text-6xl font-black text-orange-600 shadow-inner">
+      <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
+        <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-orange-50 text-4xl font-black text-orange-600 shadow-inner sm:h-36 sm:w-36 sm:text-6xl">
             {profile.initial}
           </span>
         <div>
-          <h3 className="text-4xl font-black text-slate-950">{profile.name}</h3>
-          <p className="mt-4 flex flex-wrap items-center gap-3 text-lg font-black text-slate-800">
-            {isOrange ? <SchoolIcon className="h-6 w-6 text-orange-600" /> : <BoltIcon className="h-6 w-6 text-orange-600" />}
+          <h3 className="text-3xl font-black text-slate-950 sm:text-4xl">{profile.name}</h3>
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-base font-black text-slate-800 sm:mt-4 sm:gap-3 sm:text-lg">
+            {isOrange ? <SchoolIcon className="h-5 w-5 text-orange-600 sm:h-6 sm:w-6" /> : <BoltIcon className="h-5 w-5 text-orange-600 sm:h-6 sm:w-6" />}
               {profile.field}
             </p>
-          <p className="mt-3 text-lg font-semibold text-slate-500">{profile.year}</p>
+          <p className="mt-2 text-base font-semibold text-slate-500 sm:mt-3 sm:text-lg">{profile.year}</p>
         </div>
       </div>
 
-      <div className="mt-8 border-t border-orange-100 pt-6">
-        <div className="grid gap-5 sm:grid-cols-3">
-          <TutorDetail icon={<GraduationCapIcon className="h-8 w-8" />} label="Poziomy" value={details.levels} />
-          <TutorDetail icon={<TargetIcon className="h-8 w-8" />} label="Specjalizacja" value={details.specialization} />
-          <TutorDetail icon={<UsersIcon className="h-8 w-8" />} label="Styl" value={details.style} />
+      <div className="mt-6 border-t border-orange-100 pt-5 sm:mt-8 sm:pt-6">
+        <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
+          <TutorDetail icon={<GraduationCapIcon className="h-6 w-6 sm:h-8 sm:w-8" />} label="Poziomy" value={details.levels} />
+          <TutorDetail icon={<TargetIcon className="h-6 w-6 sm:h-8 sm:w-8" />} label="Specjalizacja" value={details.specialization} />
+          <TutorDetail icon={<UsersIcon className="h-6 w-6 sm:h-8 sm:w-8" />} label="Styl" value={details.style} />
         </div>
       </div>
 
-      <ul className="mt-7 space-y-4">
+      <ul className="mt-5 space-y-3 sm:mt-7 sm:space-y-4">
         {details.bullets.map((bullet) => (
-          <li key={bullet} className="flex gap-3 text-base font-semibold leading-7 text-slate-600">
-            <CheckCircleIcon className="mt-0.5 h-6 w-6 shrink-0 text-orange-600" />
+          <li key={bullet} className="flex gap-2 text-sm font-semibold leading-6 text-slate-600 sm:gap-3 sm:text-base sm:leading-7">
+            <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-orange-600 sm:h-6 sm:w-6" />
             <span>{bullet}</span>
           </li>
         ))}
       </ul>
 
-      <div className="mt-8 flex flex-wrap gap-4">
+      <div className="mt-6 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
         {profile.tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-3 rounded-md bg-orange-50 px-4 py-3 text-sm font-black text-slate-600"
+            className="inline-flex items-center gap-2 rounded-md bg-orange-50 px-3 py-2 text-xs font-black text-slate-600 sm:gap-3 sm:px-4 sm:py-3 sm:text-sm"
           >
-            <TagMarkIcon className="h-5 w-5 text-orange-600" />
+            <TagMarkIcon className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
             {tag}
           </span>
         ))}
@@ -1684,10 +1684,10 @@ function TutorProfileCard({ profile }) {
 
       <a
         href="#kontakt"
-        className="mt-9 inline-flex w-full items-center justify-center gap-5 rounded-md bg-orange-600 px-8 py-5 text-lg font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700"
+        className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:mt-9 sm:gap-5 sm:px-8 sm:py-5 sm:text-lg"
       >
         {details.button}
-        <ArrowRightIcon className="h-6 w-6" />
+        <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
       </a>
     </article>
   );
@@ -1695,8 +1695,8 @@ function TutorProfileCard({ profile }) {
 
 function TutorDetail({ icon, label, value }) {
   return (
-    <div className="grid grid-cols-[56px_1fr] gap-4 border-orange-100 sm:border-r sm:pr-4 last:border-r-0">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+    <div className="grid grid-cols-[44px_1fr] gap-3 border-orange-100 sm:grid-cols-[56px_1fr] sm:gap-4 sm:border-r sm:pr-4 last:border-r-0">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-14 sm:w-14">
         {icon}
       </span>
       <div>
@@ -1724,7 +1724,7 @@ function ProgramSection() {
 
   return (
     <section className="relative overflow-hidden bg-[#fcfaf7]">
-      <div className="relative z-10 overflow-visible bg-slate-950 px-6 pb-36 pt-24 text-white lg:px-10 lg:pt-28">
+      <div className="relative z-10 overflow-visible bg-slate-950 px-4 pb-28 pt-16 text-white sm:px-6 sm:pb-36 sm:pt-24 lg:px-10 lg:pt-28">
         <div className="absolute left-0 top-14 hidden grid-cols-4 gap-4 opacity-25 md:grid">
           {Array.from({ length: 24 }).map((_, index) => (
             <span key={index} className="h-1.5 w-1.5 rounded-full bg-orange-200" />
@@ -1748,25 +1748,25 @@ function ProgramSection() {
           />
         </svg>
 
-        <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+        <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-6 sm:gap-8 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+            <h2 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl lg:text-6xl">
               Uczymy od 1. klasy{' '}
               <br />
               <span className="text-orange-600">do Matury</span>
             </h2>
-            <p className="mt-5 max-w-xl text-base font-medium leading-7 text-slate-300">
+            <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-slate-300 sm:mt-5 sm:text-base sm:leading-7">
               Dostosowujemy program nauczania do podstawy programowej CKE na każdym
               etapie edukacji. Przesuwaj okienka, aby zobaczyć kolejne poziomy.
             </p>
           </div>
 
-          <div className="flex items-center gap-4 lg:mt-2">
+          <div className="flex items-center gap-3 sm:gap-4 lg:mt-2">
             <button
               type="button"
               onClick={goToPreviousProgram}
               disabled={activeProgramIndex === 0}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-40 sm:h-12 sm:w-12"
               aria-label="Poprzednie poziomy nauczania"
             >
               <ArrowLeftIcon className="h-5 w-5" />
@@ -1775,7 +1775,7 @@ function ProgramSection() {
               type="button"
               onClick={goToNextProgram}
               disabled={activeProgramIndex === maxProgramIndex}
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-white shadow-[0_14px_28px_rgba(159,95,44,0.28)] transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white shadow-[0_14px_28px_rgba(159,95,44,0.28)] transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-12 sm:w-12"
               aria-label="Następne poziomy nauczania"
             >
               <ArrowRightIcon className="h-5 w-5" />
@@ -1783,7 +1783,7 @@ function ProgramSection() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-10 flex justify-center gap-3">
+        <div className="relative z-10 mt-8 flex justify-center gap-3 sm:mt-10">
           {Array.from({ length: maxProgramIndex + 1 }).map((_, index) => (
             <button
               key={index}
@@ -1797,15 +1797,15 @@ function ProgramSection() {
           ))}
         </div>
 
-        <div className="relative z-10 mx-auto -mb-56 mt-14 max-w-5xl">
-          <div className="grid gap-8 md:grid-cols-2">
+        <div className="relative z-10 mx-auto -mb-48 mt-10 max-w-5xl sm:-mb-56 sm:mt-14">
+          <div className="grid gap-5 sm:gap-8 md:grid-cols-2">
             {visibleLevels.map((level) => (
               <EducationCard key={level.title} level={level} />
             ))}
           </div>
         </div>
       </div>
-      <div className="relative z-0 h-72 bg-[#fcfaf7]" />
+      <div className="relative z-0 h-64 bg-[#fcfaf7] sm:h-72" />
     </section>
   );
 }
@@ -1813,27 +1813,27 @@ function ProgramSection() {
 function EducationCard({ level }) {
   return (
     <article
-      className={`relative flex h-full min-h-[430px] flex-col rounded-xl border bg-white px-6 py-8 text-center shadow-[0_18px_42px_rgba(39,40,45,0.12)] sm:px-8 sm:py-9 ${
+      className={`relative flex h-full min-h-[360px] flex-col rounded-xl border bg-white px-5 py-6 text-center shadow-[0_18px_42px_rgba(39,40,45,0.12)] sm:min-h-[430px] sm:px-8 sm:py-9 ${
         level.active
           ? 'border-orange-100 shadow-[0_18px_42px_rgba(39,40,45,0.07)]'
           : 'border-orange-100'
       }`}
     >
-      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-20 sm:w-20">
         <LevelIcon type={level.icon} />
       </div>
-      <h3 className="mt-6 text-xl font-black text-slate-950">{level.title}</h3>
+      <h3 className="mt-4 text-lg font-black text-slate-950 sm:mt-6 sm:text-xl">{level.title}</h3>
       <p className="mx-auto mt-3 inline-flex rounded-md bg-orange-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-orange-600">
         {level.subtitle}
       </p>
-      <p className="mx-auto mt-6 min-h-[56px] max-w-xs text-sm font-semibold leading-6 text-slate-500">
+      <p className="mx-auto mt-4 max-w-xs text-xs font-semibold leading-5 text-slate-500 sm:mt-6 sm:min-h-[56px] sm:text-sm sm:leading-6">
         {level.description}
       </p>
-      <div className="mt-6 flex-1 border-t border-orange-100 pt-6 text-left">
-        <ul className="space-y-4 text-sm font-bold leading-6 text-slate-600">
+      <div className="mt-5 flex-1 border-t border-orange-100 pt-5 text-left sm:mt-6 sm:pt-6">
+        <ul className="space-y-3 text-xs font-bold leading-5 text-slate-600 sm:space-y-4 sm:text-sm sm:leading-6">
           {level.bullets.map((bullet) => (
             <li key={bullet} className="flex gap-3">
-              <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
+              <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 sm:h-5 sm:w-5" />
               <span>{bullet}</span>
             </li>
           ))}
@@ -1845,44 +1845,44 @@ function EducationCard({ level }) {
 
 function LevelIcon({ type }) {
   if (type === 'ruler') {
-    return <RulerIcon className="h-11 w-11" />;
+    return <RulerIcon className="h-8 w-8 sm:h-11 sm:w-11" />;
   }
 
   if (type === 'bars') {
-    return <BarsIcon className="h-11 w-11" />;
+    return <BarsIcon className="h-8 w-8 sm:h-11 sm:w-11" />;
   }
 
   if (type === 'line') {
-    return <ChartIcon className="h-11 w-11" />;
+    return <ChartIcon className="h-8 w-8 sm:h-11 sm:w-11" />;
   }
 
   if (type === 'cap') {
-    return <GraduationCapIcon className="h-11 w-11" />;
+    return <GraduationCapIcon className="h-8 w-8 sm:h-11 sm:w-11" />;
   }
 
-  return <SproutIcon className="h-11 w-11" />;
+  return <SproutIcon className="h-8 w-8 sm:h-11 sm:w-11" />;
 }
 function Contact(){
   return (
-    <section id="kontakt" className="bg-[#fffdfb] px-6 pb-20 pt-10 text-slate-950 lg:px-10">
+    <section id="kontakt" className="bg-[#fffdfb] px-4 pb-12 pt-8 text-slate-950 sm:px-6 sm:pb-20 sm:pt-10 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+        <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.45em] text-orange-600">
+            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:tracking-[0.45em]">
               Kontakt
             </p>
-            <h2 className="mt-6 max-w-xl text-3xl font-black leading-tight sm:text-4xl">
+            <h2 className="mt-4 max-w-xl text-2xl font-black leading-tight sm:mt-6 sm:text-4xl">
               Napisz lub zadzwoń do nas.
               <br />
               <span className="text-orange-600">Porozmawiajmy o nauce.</span>
             </h2>
-            <p className="mt-6 max-w-md text-base font-medium leading-7 text-slate-600">
+            <p className="mt-4 max-w-md text-sm font-medium leading-6 text-slate-600 sm:mt-6 sm:text-base sm:leading-7">
               Chętnie odpowiemy na Twoje pytania dotyczące wyboru korepetytora,
               wolnych terminów czy planu nauczania.
             </p>
-            <span className="mt-7 block h-0.5 w-14 rounded-full bg-orange-600" />
+            <span className="mt-5 block h-0.5 w-12 rounded-full bg-orange-600 sm:mt-7 sm:w-14" />
 
-            <div className="mt-10 grid gap-5 sm:grid-cols-3">
+            <div className="mt-7 grid gap-4 sm:mt-10 sm:grid-cols-3 sm:gap-5">
               <ContactBenefit
                 icon={<ClockIcon className="h-6 w-6" />}
                 title="Szybka odpowiedź"
@@ -1903,21 +1903,21 @@ function Contact(){
 
           <div className="space-y-5">
             <ContactMethod
-              icon={<MailIcon className="h-8 w-8" />}
+              icon={<MailIcon className="h-6 w-6 sm:h-8 sm:w-8" />}
               title="Email"
               value="nastomatma@gmail.com"
               badge="Odpowiadamy w kilka godzin"
               href="mailto:nastomatma@gmail.com"
             />
             <ContactMethod
-              icon={<PhoneChatIcon className="h-8 w-8" />}
+              icon={<PhoneChatIcon className="h-6 w-6 sm:h-8 sm:w-8" />}
               title="Messenger / WhatsApp"
               value="Szybki i bezpośredni kontakt"
               badge="Zwykle odpowiadamy od razu"
               href="#kontakt"
             />
             <ContactMethod
-              icon={<LaptopIcon className="h-8 w-8" />}
+              icon={<LaptopIcon className="h-6 w-6 sm:h-8 sm:w-8" />}
               title="Zajęcia Online i Hybrydowe"
               value="Profesjonalne tablice wirtualne i notatki PDF po lekcji"
               badge="Wygodnie i efektywnie"
@@ -1926,20 +1926,20 @@ function Contact(){
           </div>
         </div>
 
-        <div className="mt-12 rounded-xl border border-orange-100 bg-white px-6 py-6 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-8">
-          <div className="flex flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
+        <div className="mt-8 rounded-xl border border-orange-100 bg-white px-5 py-5 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:mt-12 sm:px-8 sm:py-6">
+          <div className="flex flex-col items-center justify-between gap-5 text-center md:flex-row md:text-left">
             <div className="flex flex-col items-center gap-4 sm:flex-row">
-              <ChatBubblesIcon className="h-12 w-12 shrink-0 text-orange-600" />
+              <ChatBubblesIcon className="h-9 w-9 shrink-0 text-orange-600 sm:h-12 sm:w-12" />
               <div>
-                <h3 className="text-xl font-black">Masz inne pytanie?</h3>
-                <p className="mt-1 text-sm font-medium text-slate-500">
+                <h3 className="text-lg font-black sm:text-xl">Masz inne pytanie?</h3>
+                <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
                   Napisz do nas - doradzimy najlepsze rozwiązanie dla Ciebie.
                 </p>
               </div>
             </div>
             <a
               href="mailto:nastomatma@gmail.com"
-              className="inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-8 py-4 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:w-auto sm:px-8 sm:py-4"
             >
               Napisz do nas
               <ArrowRightIcon className="h-5 w-5" />
@@ -1954,10 +1954,10 @@ function Contact(){
 function ContactBenefit({ icon, title, text }) {
   return (
     <article className="border-orange-100 sm:border-r sm:pr-5 last:border-r-0">
-      <div className="flex h-11 w-11 items-center justify-center rounded-md border border-orange-100 bg-white text-orange-600 shadow-[0_10px_24px_rgba(39,40,45,0.04)]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-orange-100 bg-white text-orange-600 shadow-[0_10px_24px_rgba(39,40,45,0.04)] sm:h-11 sm:w-11">
         {icon}
       </div>
-      <h3 className="mt-4 text-sm font-black">{title}</h3>
+      <h3 className="mt-3 text-sm font-black sm:mt-4">{title}</h3>
       <p className="mt-2 text-xs font-medium leading-5 text-slate-500">{text}</p>
     </article>
   );
@@ -1967,17 +1967,17 @@ function ContactMethod({ icon, title, value, badge, href }) {
   return (
     <a
       href={href}
-      className="group flex flex-col gap-5 rounded-xl border border-orange-100 bg-white px-5 py-5 shadow-[0_14px_32px_rgba(39,40,45,0.05)] transition hover:border-orange-600/60 hover:shadow-[0_18px_38px_rgba(39,40,45,0.08)] sm:flex-row sm:items-center sm:gap-6 sm:px-6"
+      className="group flex flex-col gap-4 rounded-xl border border-orange-100 bg-white px-4 py-4 shadow-[0_14px_32px_rgba(39,40,45,0.05)] transition hover:border-orange-600/60 hover:shadow-[0_18px_38px_rgba(39,40,45,0.08)] sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-5"
     >
-      <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-white shadow-[0_14px_30px_rgba(159,95,44,0.22)]">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-white shadow-[0_14px_30px_rgba(159,95,44,0.22)] sm:h-16 sm:w-16">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-base font-black text-slate-950">{title}</span>
-        <span className="mt-2 block text-sm font-medium leading-6 text-slate-600">
+        <span className="block text-sm font-black text-slate-950 sm:text-base">{title}</span>
+        <span className="mt-1.5 block text-xs font-medium leading-5 text-slate-600 sm:mt-2 sm:text-sm sm:leading-6">
           {value}
         </span>
-        <span className="mt-3 inline-flex rounded-md bg-orange-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
+        <span className="mt-2 inline-flex rounded-md bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-slate-500 sm:mt-3 sm:px-3 sm:py-1.5 sm:text-xs">
           {badge}
         </span>
       </span>

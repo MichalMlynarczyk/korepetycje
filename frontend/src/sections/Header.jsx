@@ -82,12 +82,12 @@ export function Header({ onAuthSuccess }) {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 shadow-[0_14px_35px_rgba(15,23,42,0.06)] backdrop-blur">
-        <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-6 sm:h-24 lg:px-10">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:h-24 sm:px-6 lg:px-10">
           <a
             href="/"
             onClick={closeMenu}
             aria-label="NaSTOmatMa strona główna"
-            className="shrink-0 text-2xl font-extrabold tracking-tight sm:text-3xl"
+            className="shrink-0 text-xl font-extrabold tracking-tight sm:text-3xl"
           >
             <span className="text-slate-900">Na</span>
             <span className="text-orange-600">STO</span>
@@ -126,7 +126,7 @@ export function Header({ onAuthSuccess }) {
           <button
             type="button"
             onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-md border-2 border-slate-500 bg-white text-slate-900 transition hover:border-slate-900 xl:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border-2 border-slate-500 bg-white text-slate-900 transition hover:border-slate-900 sm:h-12 sm:w-12 xl:hidden"
             aria-label={isMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
@@ -153,19 +153,19 @@ export function Header({ onAuthSuccess }) {
 
         <div
           id="mobile-menu"
-          className={`border-t border-zinc-200 bg-white px-6 shadow-[0_18px_35px_rgba(15,23,42,0.08)] transition-all duration-300 xl:hidden ${
+          className={`border-t border-zinc-200 bg-white px-4 shadow-[0_18px_35px_rgba(15,23,42,0.08)] transition-all duration-300 sm:px-6 xl:hidden ${
             isMenuOpen
               ? 'max-h-[560px] opacity-100'
               : 'max-h-0 overflow-hidden opacity-0'
           }`}
         >
-          <nav className="mx-auto flex max-w-7xl flex-col gap-1 py-5 text-base font-bold text-slate-700">
+          <nav className="mx-auto flex max-w-7xl flex-col gap-1 py-4 text-sm font-bold text-slate-700 sm:py-5 sm:text-base">
             {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={closeMenu}
-                className="rounded-md px-4 py-3 transition hover:bg-orange-50 hover:text-orange-600"
+                className="rounded-md px-3 py-2.5 transition hover:bg-orange-50 hover:text-orange-600 sm:px-4 sm:py-3"
               >
                 {item.label}
               </a>
@@ -175,14 +175,14 @@ export function Header({ onAuthSuccess }) {
               <button
                 type="button"
                 onClick={() => openAuth('login')}
-                className="inline-flex items-center justify-center rounded-md border-2 border-slate-500 px-5 py-4 text-base font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
+                className="inline-flex items-center justify-center rounded-md border-2 border-slate-500 px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-900 sm:px-5 sm:py-4 sm:text-base"
               >
                 Zaloguj się
               </button>
               <a
                 href="#cennik"
                 onClick={closeMenu}
-                className="inline-flex items-center justify-center rounded-md bg-orange-600 px-5 py-4 text-base font-bold text-white shadow-[0_8px_18px_rgba(159,95,44,0.25)] transition hover:bg-orange-700"
+                className="inline-flex items-center justify-center rounded-md bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(159,95,44,0.25)] transition hover:bg-orange-700 sm:px-5 sm:py-4 sm:text-base"
               >
                 Wybierz pakiet
               </a>

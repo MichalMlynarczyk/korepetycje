@@ -1,16 +1,17 @@
 import json
+from pathlib import Path
 from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
-from django.db import models
-from django.http import JsonResponse
+from django.db import models, transaction
+from django.http import FileResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from .models import ChatMessage, LessonSlot, StudentProfile
+from .models import ChatMessage, LessonSlot, StudentMaterial, StudentProfile
 
 
 DEFAULT_SLOT_KEYS = {
@@ -35,6 +36,13 @@ CALENDAR_WEEK_START = date(2026, 6, 15)
 CALENDAR_START_HOUR = 9
 CALENDAR_PAST_DAYS = 14
 CALENDAR_FUTURE_DAYS = 28
+TEACHER_USERNAMES = ['kuba@admin.com', 'norber@admin.com']
+ALLOWED_MATERIAL_CONTENT_TYPES = {
+    'application/pdf': '.pdf',
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+}
+MAX_MATERIAL_SIZE = 15 * 1024 * 1024
 
 
 def _json_body(request):
@@ -53,6 +61,7 @@ def _user_payload(user):
         'email': user.email,
         'full_name': profile.full_name if profile else user.get_full_name(),
         'role': role,
+        'tokens': profile.tokens if profile else None,
     }
 
 
@@ -75,7 +84,10 @@ def _teacher_users():
     if not teacher_group:
         return get_user_model().objects.none()
 
-    return get_user_model().objects.filter(groups=teacher_group).order_by('id')
+    return get_user_model().objects.filter(
+        groups=teacher_group,
+        username__in=TEACHER_USERNAMES,
+    ).order_by('first_name', 'email')
 
 
 def _teacher_user():
@@ -100,6 +112,20 @@ def _chat_message_payload(message, viewer):
         'own': message.sender_id == viewer.id,
         'is_system': message.is_system,
         'time': timezone.localtime(message.created_at).strftime('%H:%M'),
+    }
+
+
+def _material_payload(material):
+    return {
+        'id': material.id,
+        'title': material.title,
+        'message': material.message,
+        'filename': material.original_filename,
+        'content_type': material.content_type,
+        'size': material.size,
+        'teacher': _display_name(material.teacher),
+        'created_at': timezone.localtime(material.created_at).strftime('%d.%m.%Y %H:%M'),
+        'download_url': f'/api/auth/materials/{material.id}/download/',
     }
 
 
@@ -242,24 +268,33 @@ def calendar_slots(request):
         return error
 
     week_end = week_start + timedelta(days=6)
-    teacher = request.user if _is_teacher(request.user) else _teacher_user()
+    teacher = request.user if _is_teacher(request.user) else None
+    if not teacher:
+        teacher_id = request.GET.get('teacher_id')
+        teacher = _teacher_users().filter(id=teacher_id).first() if teacher_id else _teacher_user()
+        if not teacher:
+            return JsonResponse({'error': 'Nie znaleziono korepetytora.'}, status=404)
     _ensure_default_slots(teacher)
 
     slots = LessonSlot.objects.select_related('teacher', 'student', 'rejected_student').filter(
         date__gte=week_start,
         date__lte=week_end,
     )
-    if _is_teacher(request.user):
-        slots = slots.filter(teacher=request.user)
+    slots = slots.filter(teacher=teacher)
 
-    return JsonResponse({
+    response = {
         'slots': [_slot_payload(slot) for slot in slots],
         'window': {
             'week_start': week_start.isoformat(),
             'min_date': _calendar_min_date().isoformat(),
             'max_date': _calendar_max_date().isoformat(),
         },
-    })
+    }
+    if not _is_teacher(request.user):
+        profile = getattr(request.user, 'student_profile', None)
+        response['tokens'] = profile.tokens if profile else 0
+
+    return JsonResponse(response)
 
 
 @require_GET
@@ -284,6 +319,7 @@ def students_list(request):
                 'name': _display_name(student),
                 'initial': _initial(student),
                 'email': student.email,
+                'tokens': student.student_profile.tokens,
                 'last_message': (
                     ChatMessage.objects.filter(student=student)
                     .filter(models.Q(recipient=request.user) | models.Q(sender=request.user))
@@ -295,6 +331,158 @@ def students_list(request):
             }
             for student in students
         ],
+    })
+
+
+@require_GET
+def materials_list(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if _is_teacher(request.user):
+        return JsonResponse({'error': 'Ten widok jest przeznaczony dla ucznia.'}, status=403)
+
+    materials = StudentMaterial.objects.select_related('teacher').filter(student=request.user)
+
+    return JsonResponse({
+        'materials': [_material_payload(material) for material in materials],
+    })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def material_upload(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if not _is_teacher(request.user):
+        return JsonResponse({'error': 'Tylko korepetytor może wysyłać pliki.'}, status=403)
+
+    teacher_group = Group.objects.filter(name='teacher').first()
+    student = get_user_model().objects.select_related('student_profile').filter(
+        id=request.POST.get('student_id'),
+    ).first()
+    if not student:
+        return JsonResponse({'error': 'Nie znaleziono ucznia.'}, status=404)
+    if not hasattr(student, 'student_profile'):
+        return JsonResponse({'error': 'Wybrana osoba nie jest uczniem.'}, status=400)
+    if teacher_group and student.groups.filter(id=teacher_group.id).exists():
+        return JsonResponse({'error': 'Wybrana osoba nie jest uczniem.'}, status=400)
+
+    title = str(request.POST.get('title', '')).strip()
+    message = str(request.POST.get('message', '')).strip()
+    upload = request.FILES.get('file')
+
+    if not title:
+        return JsonResponse({'error': 'Wpisz tytuł materiału.'}, status=400)
+    if not upload:
+        return JsonResponse({'error': 'Wybierz plik.'}, status=400)
+    if upload.size > MAX_MATERIAL_SIZE:
+        return JsonResponse({'error': 'Plik może mieć maksymalnie 15 MB.'}, status=400)
+
+    extension = Path(upload.name).suffix.lower()
+    allowed_extensions = {'.pdf', '.png', '.jpg', '.jpeg'}
+    if upload.content_type not in ALLOWED_MATERIAL_CONTENT_TYPES or extension not in allowed_extensions:
+        return JsonResponse({'error': 'Dozwolone pliki: PDF, PNG, JPG.'}, status=400)
+
+    material = StudentMaterial.objects.create(
+        student=student,
+        teacher=request.user,
+        title=title,
+        message=message,
+        file=upload,
+        original_filename=upload.name,
+        content_type=upload.content_type,
+        size=upload.size,
+    )
+
+    ChatMessage.objects.create(
+        student=student,
+        sender=request.user,
+        recipient=student,
+        body=f'Przesłano nowy materiał: {title}.',
+        is_system=True,
+    )
+
+    return JsonResponse({'material': _material_payload(material)}, status=201)
+
+
+@require_GET
+def material_download(request, material_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    material = StudentMaterial.objects.select_related('student', 'teacher').filter(id=material_id).first()
+    if not material:
+        return JsonResponse({'error': 'Nie znaleziono pliku.'}, status=404)
+
+    can_download = (
+        material.student_id == request.user.id
+        or material.teacher_id == request.user.id
+        or _is_teacher(request.user)
+    )
+    if not can_download:
+        return JsonResponse({'error': 'Nie masz dostępu do tego pliku.'}, status=403)
+
+    response = FileResponse(
+        material.file.open('rb'),
+        as_attachment=True,
+        filename=material.original_filename,
+        content_type=material.content_type,
+    )
+    response['Content-Length'] = material.size
+    return response
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def student_tokens(request, student_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if not _is_teacher(request.user):
+        return JsonResponse({'error': 'Tylko korepetytor może zmieniać żetony ucznia.'}, status=403)
+
+    teacher_group = Group.objects.filter(name='teacher').first()
+    student = get_user_model().objects.select_related('student_profile').filter(id=student_id).first()
+    if not student:
+        return JsonResponse({'error': 'Nie znaleziono ucznia.'}, status=404)
+    if not hasattr(student, 'student_profile'):
+        return JsonResponse({'error': 'Wybrana osoba nie jest uczniem.'}, status=400)
+    if teacher_group and student.groups.filter(id=teacher_group.id).exists():
+        return JsonResponse({'error': 'Wybrana osoba nie jest uczniem.'}, status=400)
+
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
+
+    action = data.get('action')
+    try:
+        amount = int(data.get('amount'))
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Podaj poprawną liczbę żetonów.'}, status=400)
+
+    if amount < 0:
+        return JsonResponse({'error': 'Liczba żetonów nie może być ujemna.'}, status=400)
+
+    profile = student.student_profile
+    if action == 'add':
+        profile.tokens += amount
+    elif action == 'set':
+        profile.tokens = amount
+    else:
+        return JsonResponse({'error': 'Nieprawidłowa akcja.'}, status=400)
+
+    profile.save(update_fields=['tokens', 'updated_at'])
+
+    return JsonResponse({
+        'student': {
+            'id': student.id,
+            'name': _display_name(student),
+            'initial': _initial(student),
+            'email': student.email,
+            'tokens': profile.tokens,
+        },
     })
 
 
@@ -528,23 +716,30 @@ def calendar_decide_slot(request):
     if action not in ['accept', 'reject']:
         return JsonResponse({'error': 'Nieprawidłowa decyzja.'}, status=400)
 
-    slot = LessonSlot.objects.select_related('teacher', 'student').filter(
-        id=data.get('slot_id'),
-        teacher=request.user,
-        status=LessonSlot.STATUS_PENDING,
-    ).first()
-    if not slot:
-        return JsonResponse({'error': 'Nie znaleziono oczekującej rezerwacji.'}, status=404)
+    with transaction.atomic():
+        slot = LessonSlot.objects.select_for_update().filter(
+            id=data.get('slot_id'),
+            teacher=request.user,
+            status=LessonSlot.STATUS_PENDING,
+        ).first()
+        if not slot:
+            return JsonResponse({'error': 'Nie znaleziono oczekującej rezerwacji.'}, status=404)
 
-    if action == 'accept':
-        slot.status = LessonSlot.STATUS_BOOKED
-        slot.rejected_student = None
-        slot.save(update_fields=['status', 'rejected_student', 'updated_at'])
-    else:
-        slot.rejected_student = slot.student
-        slot.student = None
-        slot.status = LessonSlot.STATUS_AVAILABLE
-        slot.save(update_fields=['status', 'student', 'rejected_student', 'updated_at'])
+        if action == 'accept':
+            slot.status = LessonSlot.STATUS_BOOKED
+            slot.rejected_student = None
+            slot.save(update_fields=['status', 'rejected_student', 'updated_at'])
+        else:
+            rejected_student = slot.student
+            if rejected_student_id := slot.student_id:
+                StudentProfile.objects.select_for_update().filter(user_id=rejected_student_id).update(
+                    tokens=models.F('tokens') + 1,
+                    updated_at=timezone.now(),
+                )
+            slot.rejected_student = rejected_student
+            slot.student = None
+            slot.status = LessonSlot.STATUS_AVAILABLE
+            slot.save(update_fields=['status', 'student', 'rejected_student', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot)})
 
@@ -562,24 +757,71 @@ def calendar_book_slot(request):
     if data is None:
         return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
 
-    slot_id = data.get('slot_id')
-    slot = LessonSlot.objects.select_related('teacher', 'student', 'rejected_student').filter(id=slot_id).first()
-    if not slot:
-        return JsonResponse({'error': 'Nie znaleziono terminu.'}, status=404)
+    with transaction.atomic():
+        profile = StudentProfile.objects.select_for_update().filter(user=request.user).first()
+        if not profile:
+            return JsonResponse({'error': 'Nie znaleziono profilu ucznia.'}, status=404)
+        if profile.tokens < 1:
+            return JsonResponse({'error': 'Brak żetonów. Nie można rezerwować lekcji.'}, status=400)
 
-    if slot.status != LessonSlot.STATUS_AVAILABLE:
-        return JsonResponse({'error': 'Ten termin jest już zarezerwowany.'}, status=409)
+        slot_id = data.get('slot_id')
+        slot = LessonSlot.objects.select_for_update().filter(id=slot_id).first()
+        if not slot:
+            return JsonResponse({'error': 'Nie znaleziono terminu.'}, status=404)
 
-    is_allowed, message = _is_slot_in_allowed_window(slot.date, slot.start_time)
-    if not is_allowed:
-        return JsonResponse({'error': message}, status=400)
+        if slot.status != LessonSlot.STATUS_AVAILABLE:
+            return JsonResponse({'error': 'Ten termin jest już zarezerwowany.'}, status=409)
 
-    slot.student = request.user
-    slot.status = LessonSlot.STATUS_PENDING
-    slot.rejected_student = None
-    slot.save(update_fields=['student', 'status', 'rejected_student', 'updated_at'])
+        is_allowed, message = _is_slot_in_allowed_window(slot.date, slot.start_time)
+        if not is_allowed:
+            return JsonResponse({'error': message}, status=400)
 
-    return JsonResponse({'slot': _slot_payload(slot)})
+        profile.tokens -= 1
+        profile.save(update_fields=['tokens', 'updated_at'])
+
+        slot.student = request.user
+        slot.status = LessonSlot.STATUS_PENDING
+        slot.rejected_student = None
+        slot.save(update_fields=['student', 'status', 'rejected_student', 'updated_at'])
+
+    return JsonResponse({'slot': _slot_payload(slot), 'tokens': profile.tokens})
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def calendar_cancel_slot(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if _is_teacher(request.user):
+        return JsonResponse({'error': 'Korepetytor nie anuluje terminów jako uczeń.'}, status=403)
+
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
+
+    with transaction.atomic():
+        profile = StudentProfile.objects.select_for_update().filter(user=request.user).first()
+        if not profile:
+            return JsonResponse({'error': 'Nie znaleziono profilu ucznia.'}, status=404)
+
+        slot = LessonSlot.objects.select_for_update().filter(
+            id=data.get('slot_id'),
+            student=request.user,
+            status=LessonSlot.STATUS_PENDING,
+        ).first()
+        if not slot:
+            return JsonResponse({'error': 'Nie znaleziono oczekującej rezerwacji do anulowania.'}, status=404)
+
+        profile.tokens += 1
+        profile.save(update_fields=['tokens', 'updated_at'])
+
+        slot.student = None
+        slot.status = LessonSlot.STATUS_AVAILABLE
+        slot.rejected_student = None
+        slot.save(update_fields=['student', 'status', 'rejected_student', 'updated_at'])
+
+    return JsonResponse({'slot': _slot_payload(slot), 'tokens': profile.tokens})
 
 
 @csrf_exempt
