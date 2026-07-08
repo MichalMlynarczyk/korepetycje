@@ -27,16 +27,29 @@ services:
     environment:
       DJANGO_DEBUG: "True"
       DJANGO_SECRET_KEY: dev-docker-change-me
-      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,45.93.139.211
+      FRONTEND_URL: http://45.93.139.211:5173
+      WAGTAILADMIN_BASE_URL: http://45.93.139.211:8000
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      FACEBOOK_OAUTH_CLIENT_ID: ${FACEBOOK_OAUTH_CLIENT_ID:-}
+      FACEBOOK_OAUTH_CLIENT_SECRET: ${FACEBOOK_OAUTH_CLIENT_SECRET:-}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-support.nastomatma@gmail.com}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-support.nastomatma@gmail.com}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-support.nastomatma@gmail.com}
       POSTGRES_DB: korepetycje
       POSTGRES_USER: korepetycje
       POSTGRES_PASSWORD: korepetycje_dev_password
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
-      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
-      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://45.93.139.211:5173
+      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://45.93.139.211:5173
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     volumes:
       - ./backend:/app
       - backend_media:/app/media
@@ -48,9 +61,11 @@ services:
     build:
       context: ./frontend
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_BASE_URL: http://45.93.139.211:8000
+      VITE_GOOGLE_AUTH_URL: http://45.93.139.211:8000/accounts/google/login/
+      VITE_FACEBOOK_AUTH_URL: http://45.93.139.211:8000/accounts/facebook/login/
     ports:
-      - "5173:5173"
+      - "0.0.0.0:5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules

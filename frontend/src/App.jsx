@@ -18,6 +18,7 @@ async function getCsrfToken() {
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [forceOnboardingUserId, setForceOnboardingUserId] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -59,6 +60,20 @@ function App() {
     });
 
     setCurrentUser(null);
+    setForceOnboardingUserId(null);
+  };
+
+  const handleAuthSuccess = (user, context = {}) => {
+    setCurrentUser(user);
+
+    if (context.isRegister) {
+      setForceOnboardingUserId(user.id);
+    }
+  };
+
+  const handleAccountDeleted = () => {
+    setCurrentUser(null);
+    setForceOnboardingUserId(null);
   };
 
   if (!isAuthChecked) {
@@ -71,12 +86,17 @@ function App() {
 
   return (
     <>
-      {!currentUser && <Header onAuthSuccess={setCurrentUser} />}
+      {!currentUser && <Header onAuthSuccess={handleAuthSuccess} />}
       <main className="min-h-screen bg-white text-slate-950">
         {currentUser?.role === 'teacher' ? (
           <TeacherPage user={currentUser} onLogout={handleLogout} />
         ) : currentUser ? (
-          <StudentPage user={currentUser} onLogout={handleLogout} />
+          <StudentPage
+            user={currentUser}
+            onLogout={handleLogout}
+            onAccountDeleted={handleAccountDeleted}
+            forceOnboarding={forceOnboardingUserId === currentUser.id}
+          />
         ) : (
           <HomePage />
         )}

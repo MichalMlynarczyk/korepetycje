@@ -14,6 +14,7 @@ class StudentProfile(models.Model):
     )
     full_name = models.CharField(max_length=160)
     tokens = models.PositiveIntegerField(default=0)
+    onboarding_answers = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -54,6 +55,7 @@ class LessonSlot(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

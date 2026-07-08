@@ -1,4 +1,7 @@
 Django>=5.1,<5.2
 django-cors-headers>=4.6,<5.0
+django-allauth>=65.0,<66.0
+PyJWT>=2.10,<3.0
+cryptography>=45.0,<46.0
 psycopg2-binary>=2.9,<3.0
 wagtail>=6.3,<7.0

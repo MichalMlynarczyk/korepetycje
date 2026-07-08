@@ -4,6 +4,8 @@ from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
+from django.conf import settings
+from django.core.mail import BadHeaderError, send_mail
 from django.db import models, transaction
 from django.http import FileResponse, JsonResponse
 from django.middleware.csrf import get_token
@@ -55,6 +57,7 @@ def _json_body(request):
 def _user_payload(user):
     profile = getattr(user, 'student_profile', None)
     role = 'teacher' if user.groups.filter(name='teacher').exists() else 'student'
+    joined_recently = user.date_joined >= timezone.now() - timedelta(hours=1)
 
     return {
         'id': user.id,
@@ -62,6 +65,8 @@ def _user_payload(user):
         'full_name': profile.full_name if profile else user.get_full_name(),
         'role': role,
         'tokens': profile.tokens if profile else None,
+        'onboarding_answers': profile.onboarding_answers if profile else {},
+        'is_new_user': joined_recently,
     }
 
 
@@ -70,6 +75,9 @@ def _is_teacher(user):
 
 
 def _display_name(user):
+    if user.username == 'norber@admin.com':
+        return 'Hubert'
+
     profile = getattr(user, 'student_profile', None)
     return profile.full_name if profile else user.get_full_name() or user.email or user.username
 
@@ -129,6 +137,48 @@ def _material_payload(material):
     }
 
 
+def _slot_start_datetime(slot):
+    slot_datetime = datetime.combine(slot.date, slot.start_time)
+    return timezone.make_aware(slot_datetime, timezone.get_current_timezone())
+
+
+def _booked_cancellation_info(slot):
+    if slot.status != LessonSlot.STATUS_BOOKED or not slot.student_id:
+        return {
+            'can_cancel': False,
+            'cancel_deadline': None,
+            'cancel_message': None,
+        }
+
+    now = timezone.localtime()
+    slot_start = _slot_start_datetime(slot)
+    if slot_start <= now:
+        return {
+            'can_cancel': False,
+            'cancel_deadline': None,
+            'cancel_message': 'Lekcja została już zrealizowana.',
+        }
+
+    confirmed_at = timezone.localtime(slot.confirmed_at or slot.updated_at)
+    hours_to_start = (slot_start - now).total_seconds() / 3600
+
+    if hours_to_start < 24:
+        cancel_deadline = confirmed_at + timedelta(hours=1)
+        cancel_message = 'Lekcję można anulować przez 1 godzinę od potwierdzenia.'
+    elif hours_to_start <= 48:
+        cancel_deadline = confirmed_at + timedelta(hours=4)
+        cancel_message = 'Lekcję można anulować przez 4 godziny od potwierdzenia.'
+    else:
+        cancel_deadline = slot_start - timedelta(hours=24)
+        cancel_message = 'Lekcję można anulować do 24 godzin przed rozpoczęciem.'
+
+    return {
+        'can_cancel': now < cancel_deadline,
+        'cancel_deadline': timezone.localtime(cancel_deadline).isoformat(),
+        'cancel_message': cancel_message,
+    }
+
+
 def _slot_payload(slot):
     student_name = None
     if slot.student_id:
@@ -138,6 +188,7 @@ def _slot_payload(slot):
     if slot.rejected_student_id:
         rejected_profile = getattr(slot.rejected_student, 'student_profile', None)
         rejected_student_name = rejected_profile.full_name if rejected_profile else slot.rejected_student.get_full_name()
+    cancellation_info = _booked_cancellation_info(slot)
 
     return {
         'id': slot.id,
@@ -145,9 +196,11 @@ def _slot_payload(slot):
         'start_time': slot.start_time.strftime('%H:%M'),
         'end_time': slot.end_time.strftime('%H:%M'),
         'status': slot.status,
+        'confirmed_at': timezone.localtime(slot.confirmed_at).isoformat() if slot.confirmed_at else None,
+        **cancellation_info,
         'teacher': {
             'id': slot.teacher_id,
-            'name': slot.teacher.get_full_name() or slot.teacher.email or slot.teacher.username,
+            'name': _display_name(slot.teacher),
         },
         'student': {
             'id': slot.student_id,
@@ -320,6 +373,7 @@ def students_list(request):
                 'initial': _initial(student),
                 'email': student.email,
                 'tokens': student.student_profile.tokens,
+                'onboarding_answers': student.student_profile.onboarding_answers,
                 'last_message': (
                     ChatMessage.objects.filter(student=student)
                     .filter(models.Q(recipient=request.user) | models.Q(sender=request.user))
@@ -332,6 +386,41 @@ def students_list(request):
             for student in students
         ],
     })
+
+
+@csrf_exempt
+@require_http_methods(['GET', 'POST'])
+def onboarding_answers(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if _is_teacher(request.user):
+        return JsonResponse({'error': 'Ten widok jest przeznaczony dla ucznia.'}, status=403)
+
+    profile = getattr(request.user, 'student_profile', None)
+    if not profile:
+        return JsonResponse({'error': 'Nie znaleziono profilu ucznia.'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({'answers': profile.onboarding_answers})
+
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy format danych.'}, status=400)
+
+    answers = data.get('answers', data)
+    if not isinstance(answers, dict):
+        return JsonResponse({'error': 'Odpowiedzi ankiety muszą być obiektem.'}, status=400)
+
+    allowed_keys = {'subject', 'format', 'tutor', 'phone', 'fullName'}
+    profile.onboarding_answers = {
+        key: value
+        for key, value in answers.items()
+        if key in allowed_keys and isinstance(value, str)
+    }
+    profile.save(update_fields=['onboarding_answers', 'updated_at'])
+
+    return JsonResponse({'answers': profile.onboarding_answers})
 
 
 @require_GET
@@ -694,7 +783,8 @@ def calendar_teacher_reserve_slot(request):
     slot.status = LessonSlot.STATUS_BOOKED
     slot.student = student
     slot.rejected_student = None
-    slot.save(update_fields=['end_time', 'status', 'student', 'rejected_student', 'updated_at'])
+    slot.confirmed_at = timezone.now() if student else None
+    slot.save(update_fields=['end_time', 'status', 'student', 'rejected_student', 'confirmed_at', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot)})
 
@@ -728,7 +818,8 @@ def calendar_decide_slot(request):
         if action == 'accept':
             slot.status = LessonSlot.STATUS_BOOKED
             slot.rejected_student = None
-            slot.save(update_fields=['status', 'rejected_student', 'updated_at'])
+            slot.confirmed_at = timezone.now()
+            slot.save(update_fields=['status', 'rejected_student', 'confirmed_at', 'updated_at'])
         else:
             rejected_student = slot.student
             if rejected_student_id := slot.student_id:
@@ -739,7 +830,8 @@ def calendar_decide_slot(request):
             slot.rejected_student = rejected_student
             slot.student = None
             slot.status = LessonSlot.STATUS_AVAILABLE
-            slot.save(update_fields=['status', 'student', 'rejected_student', 'updated_at'])
+            slot.confirmed_at = None
+            slot.save(update_fields=['status', 'student', 'rejected_student', 'confirmed_at', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot)})
 
@@ -782,7 +874,8 @@ def calendar_book_slot(request):
         slot.student = request.user
         slot.status = LessonSlot.STATUS_PENDING
         slot.rejected_student = None
-        slot.save(update_fields=['student', 'status', 'rejected_student', 'updated_at'])
+        slot.confirmed_at = None
+        slot.save(update_fields=['student', 'status', 'rejected_student', 'confirmed_at', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot), 'tokens': profile.tokens})
 
@@ -808,10 +901,15 @@ def calendar_cancel_slot(request):
         slot = LessonSlot.objects.select_for_update().filter(
             id=data.get('slot_id'),
             student=request.user,
-            status=LessonSlot.STATUS_PENDING,
         ).first()
         if not slot:
-            return JsonResponse({'error': 'Nie znaleziono oczekującej rezerwacji do anulowania.'}, status=404)
+            return JsonResponse({'error': 'Nie znaleziono rezerwacji do anulowania.'}, status=404)
+        if slot.status not in [LessonSlot.STATUS_PENDING, LessonSlot.STATUS_BOOKED]:
+            return JsonResponse({'error': 'Tego terminu nie można anulować.'}, status=400)
+        if slot.status == LessonSlot.STATUS_BOOKED:
+            cancellation_info = _booked_cancellation_info(slot)
+            if not cancellation_info['can_cancel']:
+                return JsonResponse({'error': 'Minął czas na anulowanie tych zajęć.'}, status=400)
 
         profile.tokens += 1
         profile.save(update_fields=['tokens', 'updated_at'])
@@ -819,9 +917,124 @@ def calendar_cancel_slot(request):
         slot.student = None
         slot.status = LessonSlot.STATUS_AVAILABLE
         slot.rejected_student = None
-        slot.save(update_fields=['student', 'status', 'rejected_student', 'updated_at'])
+        slot.confirmed_at = None
+        slot.save(update_fields=['student', 'status', 'rejected_student', 'confirmed_at', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot), 'tokens': profile.tokens})
+
+
+@csrf_exempt
+@require_POST
+def contact_message(request):
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
+
+    message = str(data.get('message', '')).strip()
+    if not message:
+        return JsonResponse({'error': 'Wpisz wiadomość przed wysłaniem.'}, status=400)
+
+    if len(message) > 5000:
+        return JsonResponse({'error': 'Wiadomość jest za długa.'}, status=400)
+
+    sender_label = 'Gość ze strony startowej'
+    if request.user.is_authenticated:
+        sender_label = _display_name(request.user)
+        if request.user.email:
+            sender_label = f'{sender_label} <{request.user.email}>'
+
+    body = (
+        'Nowa wiadomość z formularza kontaktowego NaSTOmatMa.\n\n'
+        f'Nadawca: {sender_label}\n\n'
+        f'{message}'
+    )
+
+    try:
+        send_mail(
+            subject='pytanie od Klienta',
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[settings.CONTACT_EMAIL],
+            fail_silently=False,
+        )
+    except BadHeaderError:
+        return JsonResponse({'error': 'Nieprawidłowy nagłówek wiadomości.'}, status=400)
+    except Exception:
+        return JsonResponse({'error': 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.'}, status=502)
+
+    return JsonResponse({'detail': 'Wiadomość została wysłana.'})
+
+
+@csrf_exempt
+@require_POST
+def package_contact_message(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if _is_teacher(request.user):
+        return JsonResponse({'error': 'Ten widok jest przeznaczony dla ucznia.'}, status=403)
+
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
+
+    message = str(data.get('message', '')).strip()
+    if not message:
+        return JsonResponse({'error': 'Wpisz wiadomość przed wysłaniem.'}, status=400)
+
+    if len(message) > 5000:
+        return JsonResponse({'error': 'Wiadomość jest za długa.'}, status=400)
+
+    teacher_name = str(data.get('teacher_name', '')).strip().lower()
+    teachers = list(_teacher_users())
+    teacher = next(
+        (user for user in teachers if _display_name(user).strip().lower() == teacher_name),
+        None,
+    ) if teacher_name else None
+    teacher = teacher or _teacher_user()
+    if not teacher:
+        return JsonResponse({'error': 'Nie znaleziono korepetytora.'}, status=404)
+
+    sender_label = _display_name(request.user)
+    if request.user.email:
+        sender_label = f'{sender_label} <{request.user.email}>'
+
+    body = (
+        'Nowa wiadomość o zakupie pakietu NaSTOmatMa.\n\n'
+        f'Nadawca: {sender_label}\n'
+        f'Korepetytor: {_display_name(teacher)}\n\n'
+        f'{message}'
+    )
+
+    try:
+        send_mail(
+            subject='Zakup żetonów NaSTOmatMa',
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[settings.CONTACT_EMAIL],
+            fail_silently=False,
+        )
+    except BadHeaderError:
+        return JsonResponse({'error': 'Nieprawidłowy nagłówek wiadomości.'}, status=400)
+    except Exception:
+        return JsonResponse({'error': 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.'}, status=502)
+
+    ChatMessage.objects.create(
+        student=request.user,
+        sender=request.user,
+        recipient=teacher,
+        body=message,
+    )
+
+    return JsonResponse({
+        'detail': 'Wiadomość została wysłana.',
+        'teacher': {
+            'id': teacher.id,
+            'name': _display_name(teacher),
+            'initial': _initial(teacher),
+            'email': teacher.email,
+        },
+    })
 
 
 @csrf_exempt
@@ -895,3 +1108,25 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return JsonResponse({'detail': 'Wylogowano.'})
+
+
+@csrf_exempt
+@require_http_methods(['DELETE'])
+def account_delete(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    user = request.user
+    if _is_teacher(user):
+        return JsonResponse({'error': 'Konto korepetytora nie może być usunięte z panelu ucznia.'}, status=403)
+
+    with transaction.atomic():
+        LessonSlot.objects.filter(student=user).update(
+            student=None,
+            status=LessonSlot.STATUS_AVAILABLE,
+        )
+        LessonSlot.objects.filter(rejected_student=user).update(rejected_student=None)
+        user.delete()
+
+    logout(request)
+    return JsonResponse({'detail': 'Konto zostało usunięte.'})

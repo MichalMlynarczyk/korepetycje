@@ -1,14 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../api.js';
 import individualLearningImage from '../assets/individual-learning.png';
+import heroStudentImage from '../../images/ChatGPT Image 2 lip 2026, 22_32_26.png';
+import contactImage from '../../images/kontakt.png';
+
+const MESSENGER_CHAT_URL = 'https://www.facebook.com/profile.php?id=61591144089900&mibextid=wwXIfr&rdid=LMErxcEybUPiCe0v&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F191Mh71ZZi%2F%3Fmibextid%3DwwXIfr#';
+
+function openRegisterModal() {
+  window.dispatchEvent(
+    new CustomEvent('nastomatma:open-auth', {
+      detail: { mode: 'register' },
+    }),
+  );
+}
+
+function openContactModal(mode = 'email') {
+  window.dispatchEvent(
+    new CustomEvent('nastomatma:open-contact', {
+      detail: { mode },
+    }),
+  );
+}
 
 const tutors = [
   {
     name: 'Kuba',
     initial: 'K',
-    field: 'Inżynieria energetyki',
+    field: 'Inżynieria Energetyki',
     school: '(Politechnika)',
     color: 'bg-orange-700',
-    tags: ['Matematyka szkoła', 'Matura Rozszerzona', 'Fizyka', 'Analiza matematyczna'],
+    text: 'Specjalizuję się w przygotowaniu do matury oraz w tłumaczeniu trudnych zagadnień w prosty i zrozumiały sposób.',
+    year: 'III rok Politechniki',
+    levels: '7-8 klasa, liceum, matura',
+    specialization: 'Matura rozszerzona,\nfizyka, analiza',
+    style: 'Logiczne myślenie i\npraktyka',
+    quote: 'Tłumaczę trudne zagadnienia na proste przykłady i pokazuję, jak to działa w praktyce.',
+    bullets: [
+      'Łączy matematykę z fizyką i pokazuje zastosowania',
+      'Pomaga przełamać bariery i zrozumieć "dlaczego"',
+    ],
+    tags: ['Matematyka SP i LO', 'Matura Rozszerzona', 'Analiza Matematyczna', 'Fizyka i Mechanika'],
+    cta: 'Umów lekcję z Kubą',
   },
   {
     name: 'Hubert',
@@ -16,7 +48,36 @@ const tutors = [
     field: 'Budownictwo',
     school: '(Politechnika)',
     color: 'bg-orange-600',
-    tags: ['Matematyka szkoła', 'Matura Podstawowa', 'Mechanika', 'Geometria'],
+    text: 'Pomagam zrozumieć matematykę krok po kroku i pokazuję, że da się ją polubić.',
+    year: 'II rok Politechniki',
+    levels: '1-8 klasa, liceum, matura',
+    specialization: 'Matura podstawowa,\ngeometria, statyka',
+    style: 'Spokój, cierpliwość i krok\npo kroku',
+    quote: 'Pomagam zrozumieć podstawy i uporządkować wiedzę, krok po kroku.',
+    bullets: [
+      'Tłumaczy cierpliwie, aż wszystko stanie się jasne',
+      'Wspiera uczniów w budowaniu pewności siebie',
+    ],
+    tags: ['Matematyka podstawowa', 'Geometria i stereometria', 'Mechanika budowli', 'Wytrzymałość materiałów'],
+    cta: 'Umów lekcję z Hubertem',
+  },
+];
+
+const heroBenefits = [
+  {
+    icon: <GraduationCapIcon className="h-5 w-5" />,
+    title: 'Indywidualne podejście',
+    text: 'do każdego ucznia',
+  },
+  {
+    icon: <StarIcon className="h-5 w-5" />,
+    title: 'Proste wyjaśnienia',
+    text: 'i skuteczne metody',
+  },
+  {
+    icon: <TrendingUpIcon className="h-5 w-5" />,
+    title: 'Lepsze wyniki',
+    text: 'i więcej pewności siebie',
   },
 ];
 
@@ -254,116 +315,109 @@ const educationLevels = [
 ];
 
 export function HomePage() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactModalMode, setContactModalMode] = useState('email');
+
+  useEffect(() => {
+    const handleOpenContact = (event) => {
+      setContactModalMode(event.detail?.mode === 'messenger' ? 'messenger' : 'email');
+      setIsContactModalOpen(true);
+    };
+
+    window.addEventListener('nastomatma:open-contact', handleOpenContact);
+
+    return () => {
+      window.removeEventListener('nastomatma:open-contact', handleOpenContact);
+    };
+  }, []);
+
   return (
     <>
-      <div className="relative overflow-hidden bg-[#fcfaf7]">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(159,95,44,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(159,95,44,0.045)_1px,transparent_1px)] bg-[size:28px_28px]" />
-        <div className="absolute -left-24 top-64 h-80 w-80 rounded-full bg-orange-50/80 blur-3xl" />
-        <div className="absolute right-0 top-0 h-full w-1/2 bg-white/35" />
+      <div className="relative overflow-hidden bg-[#fffdf9]">
+        <div className="absolute inset-x-0 top-0 h-px bg-zinc-100" />
 
         <section className="relative">
-          <div className="absolute left-6 top-48 hidden grid-cols-3 gap-6 md:grid">
-            {Array.from({ length: 15 }).map((_, index) => (
-              <span key={index} className="h-2 w-2 rounded-full bg-slate-300" />
-            ))}
-          </div>
-
-          <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center gap-8 px-4 py-10 sm:min-h-[calc(100vh-6rem)] sm:gap-12 sm:px-6 sm:py-16 lg:px-10 xl:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <div className="mb-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-orange-300 bg-white px-3 py-2 text-[10px] font-extrabold uppercase tracking-wide text-orange-600 shadow-[0_10px_28px_rgba(159,95,44,0.12)] sm:mb-10 sm:gap-4 sm:px-5 sm:py-3 sm:text-sm">
-                <GraduationCapIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span>Klasa 1 SP</span>
-                <span>•</span>
-                <span>Matura</span>
-                <span>•</span>
-                <span>5 lat doświadczenia</span>
-              </div>
-
-              <h1 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-normal text-slate-950 sm:text-7xl sm:leading-[0.98] lg:text-8xl">
+          <div className="relative mx-auto grid w-full max-w-[88rem] items-center gap-10 px-4 py-10 sm:px-6 sm:py-12 lg:min-h-[570px] lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+            <div className="relative z-10">
+              <h1 className="max-w-3xl text-5xl font-black leading-[1.03] tracking-normal text-[#07463f] sm:text-6xl lg:text-7xl">
                 Matematyka,
                 <br />
-                którą
+                która ma sens
                 <br />
-                <span className="relative inline-block text-orange-600">
-                  rozumiesz
-                  <span className="absolute -bottom-1 left-1 h-2 w-[92%] rounded-full border-b-4 border-orange-300 sm:-bottom-2 sm:left-2 sm:h-3" />
+                <span className="relative inline-block text-[#f0b544]">
+                  i daje pewność
+                  <span className="absolute -bottom-1 left-2 h-2 w-[94%] rounded-full bg-[#f6df9e]/80" />
                 </span>
               </h1>
 
-              <p className="mt-6 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-10 sm:text-xl sm:leading-9">
-                Uczymy matematyki na poziomie od 1. klasy szkoły podstawowej do
-                klas maturalnych (podstawa i rozszerzenie). Mamy ponad 5 lat
-                doświadczenia i już ponad 40 zadowolonych uczniów pod naszą
-                opieką. Zero zakuwania na pamięć, kładziemy nacisk
-                wyłącznie na logiczne myślenie.
+              <p className="mt-6 max-w-xl text-base font-medium leading-8 text-slate-700 sm:text-lg">
+                Uczymy matematyki na poziomie szkoły podstawowej i średniej w
+                przyjaznej atmosferze. Zrozumienie zamiast wkuwania - efekty
+                zamiast stresu.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-5">
-                <a
-                  href="#kontakt"
-                  className="inline-flex items-center justify-center gap-3 rounded-md bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.24)] transition hover:bg-orange-700 sm:gap-5 sm:px-9 sm:py-5 sm:text-lg"
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-5">
+                <button
+                  type="button"
+                  onClick={openRegisterModal}
+                  className="inline-flex items-center justify-center gap-3 rounded-lg bg-[#007566] px-6 py-4 text-base font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.2)] transition hover:bg-[#005d51]"
                 >
+                  <SearchIcon className="h-5 w-5" />
                   Zacznij teraz
-                  <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-                </a>
+                </button>
                 <a
-                  href="#jak-to-dziala"
-                  className="inline-flex items-center justify-center gap-3 rounded-md border-2 border-slate-500 bg-white px-5 py-3 text-sm font-extrabold text-slate-800 transition hover:border-slate-900 hover:text-slate-950 sm:gap-5 sm:px-9 sm:py-5 sm:text-lg"
+                  href="#cennik"
+                  className="inline-flex items-center justify-center rounded-lg border-2 border-[#007566] bg-white px-7 py-4 text-base font-extrabold text-[#07463f] transition hover:bg-[#eff8f5]"
                 >
-                  Jak to działa?
-                  <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  Zobacz ofertę
                 </a>
+              </div>
+
+              <div className="mt-9 grid gap-4 text-sm text-slate-700 sm:grid-cols-3 lg:max-w-2xl">
+                {heroBenefits.map((benefit) => (
+                  <HeroBenefit key={benefit.title} benefit={benefit} />
+                ))}
               </div>
             </div>
 
-            <div className="relative mx-auto hidden w-full max-w-xl flex-col gap-8 xl:flex xl:pl-8">
-              <div className="absolute left-[-76px] top-32 hidden h-[360px] w-[220px] rounded-[50%] border border-slate-200 xl:block" />
-              {tutors.map((tutor) => (
-                <TutorCard key={tutor.name} tutor={tutor} />
-              ))}
+            <div className="relative mx-auto w-full max-w-[650px]">
+              <div className="absolute -left-8 top-28 hidden grid-cols-4 gap-4 lg:grid">
+                {Array.from({ length: 20 }).map((_, index) => (
+                  <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
+                ))}
+              </div>
+              <img
+                src={heroStudentImage}
+                alt="Uczennica rozwiązująca zadania z matematyki przy laptopie"
+                className="relative z-10 w-full object-contain"
+              />
             </div>
           </div>
         </section>
-
-        <StatsBar />
       </div>
-      <HowToStart />
-      <WhyUs />
-      <PriceList />
       <Corepetitors />
+      <HowToStart />
+      <ProgramSection />
+      <PriceList />
       <Contact />
+      {isContactModalOpen && (
+        <ContactModal mode={contactModalMode} onClose={() => setIsContactModalOpen(false)} />
+      )}
     </>
   );
 }
 
-function TutorCard({ tutor }) {
+function HeroBenefit({ benefit }) {
   return (
-    <article className="relative z-10 rounded-2xl bg-white px-8 py-8 shadow-[0_18px_42px_rgba(15,23,42,0.12)] sm:px-10">
-      <div className="grid gap-6 sm:grid-cols-[96px_1fr]">
-        <div className={`flex h-24 w-24 items-center justify-center rounded-full ${tutor.color} text-5xl font-bold text-white`}>
-          {tutor.initial}
-        </div>
-        <div>
-          <h2 className="text-3xl font-extrabold text-slate-950">{tutor.name}</h2>
-          <p className="mt-2 text-base font-extrabold uppercase tracking-widest text-orange-600">
-            {tutor.field}
-            <br />
-            {tutor.school}
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            {tutor.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-bold text-zinc-500"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </article>
+    <div className="grid grid-cols-[44px_1fr] items-center gap-3">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#e3f1ec] text-[#007566]">
+        {benefit.icon}
+      </span>
+      <p className="text-xs font-semibold leading-5">
+        <span className="block font-extrabold text-slate-800">{benefit.title}</span>
+        {benefit.text}
+      </p>
+    </div>
   );
 }
 
@@ -477,25 +531,42 @@ function StatIcon({ type, className }) {
 
 function HowToStart() {
   return (
-    <section id="jak-to-dziala" className="bg-orange-50 px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:text-sm sm:tracking-[0.45em]">
-          Proces
-        </p>
-        <h2 className="mt-4 text-3xl font-black leading-tight text-slate-950 sm:mt-5 sm:text-7xl">
-          Jak działamy
-        </h2>
-        <p className="mt-4 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-xl sm:leading-9">
-          Prosty i skuteczny proces od pierwszego zgłoszenia do pełnego
-          opanowania materiału.
-        </p>
+    <section id="jak-to-dziala" className="relative overflow-hidden bg-[#fbfaf7] px-4 pb-12 pt-12 sm:px-6 sm:pb-16 sm:pt-16 lg:px-10">
+      <div className="absolute left-[8%] top-16 hidden grid-cols-4 gap-5 opacity-80 lg:grid">
+        {Array.from({ length: 20 }).map((_, index) => (
+          <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
+        ))}
+      </div>
+      <div className="absolute -right-14 -top-16 hidden h-48 w-72 rotate-[-18deg] rounded-[48%] bg-[#fff0cf] lg:block">
+        <span className="absolute bottom-14 left-20 text-lg font-black text-[#0a604f]">
+          a² + b² = c²
+        </span>
+      </div>
+      <div className="absolute -right-10 top-20 hidden h-56 w-32 rounded-[50%] border-l border-[#c6d7ce] lg:block" />
 
-        <div className="relative mt-9 grid gap-5 sm:mt-16 sm:gap-8 lg:grid-cols-4">
-          <div className="absolute left-[11%] right-[11%] top-7 hidden border-t-2 border-dashed border-orange-200 lg:block" />
+      <div className="relative mx-auto max-w-[86rem]">
+        <div className="text-center">
+          <p className="text-xs font-black uppercase tracking-[0.34em] text-[#8fc1b2]">
+            Proces
+          </p>
+          <h2 className="relative mx-auto mt-2 inline-block text-4xl font-black leading-tight text-[#07463f] sm:text-6xl">
+            Jak działamy
+            <span className="absolute -bottom-1 left-2 h-2 w-[94%] rounded-full bg-[#f6c65f]" />
+          </h2>
+          <p className="mx-auto mt-5 max-w-xl text-base font-medium leading-7 text-slate-700">
+            Prosty i skuteczny proces od pierwszego zgłoszenia do pełnego
+            opanowania materiału.
+          </p>
+        </div>
+
+        <div className="relative mt-10 grid gap-8 sm:mt-14 lg:grid-cols-4">
+          <div className="absolute left-[12%] right-[12%] top-5 hidden border-t-2 border-dashed border-[#c6d7ce] lg:block" />
           {steps.map((step) => (
             <ProcessStep key={step.number} step={step} />
           ))}
         </div>
+
+        <ProcessStatsPanel />
       </div>
     </section>
   );
@@ -504,21 +575,52 @@ function HowToStart() {
 function ProcessStep({ step }) {
   return (
     <article className="relative text-center">
-      <div className="relative z-10 mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-base font-black text-white shadow-[0_12px_26px_rgba(159,95,44,0.26)] sm:h-16 sm:w-16 sm:text-xl">
+      <div className="relative z-10 mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#006b5f] text-sm font-black text-white shadow-[0_12px_24px_rgba(0,107,95,0.22)]">
         {step.number}
       </div>
-      <div className="relative mt-5 rounded-xl border border-orange-100 bg-white/78 px-5 pb-6 pt-7 shadow-[0_18px_38px_rgba(39,40,45,0.06)] sm:mt-8 sm:min-h-[300px] sm:px-7 sm:pb-9 sm:pt-10">
-        <span className="absolute -top-3 left-1/2 h-6 w-6 -translate-x-1/2 rotate-45 border-l border-t border-orange-100 bg-white/78" />
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-24 sm:w-24">
+      <div className="mt-5 px-4">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f1ea] text-[#006b5f] sm:h-24 sm:w-24">
           <StepIcon type={step.icon} />
         </div>
-        <h3 className="mt-5 text-xl font-extrabold text-slate-950 sm:mt-8 sm:text-2xl">{step.title}</h3>
-        <span className="mx-auto mt-4 block h-1 w-10 rounded-full bg-orange-600 sm:mt-5 sm:w-12" />
-        <p className="mx-auto mt-4 max-w-xs text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-base sm:leading-7">
+        <h3 className="mt-5 text-xl font-black text-[#07463f]">{step.title}</h3>
+        <p className="mx-auto mt-3 max-w-[15rem] text-sm font-medium leading-6 text-slate-700">
           {step.text}
         </p>
+        <span className="mx-auto mt-4 block h-1 w-14 rounded-full bg-[#f6c65f]" />
       </div>
     </article>
+  );
+}
+
+function ProcessStatsPanel() {
+  return (
+    <div className="mt-12 rounded-2xl bg-[linear-gradient(135deg,#164f36,#0b5f4f)] px-6 py-8 text-white shadow-[0_20px_45px_rgba(9,64,47,0.18)] sm:mt-16 sm:px-10 lg:grid lg:grid-cols-[1.2fr_2.2fr] lg:items-center lg:px-14 lg:py-12">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.32em] text-white/60">
+          Dlaczego warto z nami?
+        </p>
+        <h3 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">
+          Sprawdzone rezultaty
+        </h3>
+        <p className="mt-5 max-w-md text-base font-medium leading-8 text-white/72">
+          Od lat pomagamy uczniom zrozumieć matematykę i osiągać świetne wyniki na egzaminach.
+        </p>
+      </div>
+
+      <div className="mt-8 grid gap-0 divide-y divide-white/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:mt-0 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.value} className="px-4 py-5 text-center">
+            <span className="mx-auto flex h-9 w-9 items-center justify-center text-white/58">
+              <StatIcon type={stat.icon} className="h-7 w-7" />
+            </span>
+            <p className="mt-3 text-4xl font-black leading-none text-white">{stat.value}</p>
+            <p className="mx-auto mt-3 max-w-[9rem] whitespace-pre-line text-sm font-medium leading-5 text-white/70">
+              {stat.label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -608,6 +710,66 @@ function ArrowLeftIcon({ className }) {
         strokeLinejoin="round"
         strokeWidth="2.4"
         d="M19 12H5m6-6-6 6 6 6"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.3"
+        d="M18 6 6 18M6 6l12 12"
+      />
+    </svg>
+  );
+}
+
+function SearchIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.3"
+        d="m20 20-4.2-4.2M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"
+      />
+    </svg>
+  );
+}
+
+function PackageIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.1"
+        d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v8.5m8-4L12 12 4 7.5m4 2.3 8-4.5"
+      />
+    </svg>
+  );
+}
+
+function PaperPlaneIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.1"
+        d="m21 3-7.5 18-4-8.5L3 9l18-6Zm-11.5 9.5L21 3"
       />
     </svg>
   );
@@ -816,13 +978,14 @@ function WhyUs() {
                 <span className="text-2xl font-black text-orange-600 sm:text-3xl">98%</span> uczniów osiąga lepsze wyniki dzięki korepetycjom indywidualnym 1:1.
               </p>
             </div>
-            <a
-              href="#kontakt"
+            <button
+              type="button"
+              onClick={openContactModal}
               className="inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:w-auto sm:gap-4 sm:px-8 sm:py-5 sm:text-base"
             >
               Umów lekcję próbną
               <ArrowRightIcon className="h-5 w-5" />
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -1334,12 +1497,267 @@ function ChatBubblesIcon({ className }) {
 }
 
 function PriceList() {
+  const pricingGroups = [
+    {
+      id: 'primary',
+      label: 'Klasa 1-8 podstawówka',
+      note: 'Budowanie solidnych podstaw, ułamki, proste równania.',
+      plans: [
+        {
+          name: 'Pakiet podstawowy',
+          price: 99,
+          icon: 'sprout',
+          features: [
+            '1 lekcja tygodniowo',
+            'Stały gwarantowany termin',
+            'Budowanie solidnych podstaw',
+            'Dla dzieci radzących sobie!',
+          ],
+        },
+        {
+          name: 'Pakiet rozwój',
+          price: 89,
+          icon: 'line',
+          popular: true,
+          features: [
+            '2 lekcje tygodniowo',
+            'Stały gwarantowany termin',
+            'Skuteczny rozwój umiejętności',
+            'Dla dzieci z drobnymi trudnościami!',
+          ],
+        },
+        {
+          name: 'Pakiet intensywny',
+          price: 79,
+          icon: 'target',
+          features: [
+            '3 lekcje tygodniowo',
+            'Stały gwarantowany termin',
+            'Maksymalne postępy',
+            'Dla dzieci z dużymi zaległościami!',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'secondary',
+      label: 'Szkoła średnia / matura',
+      note: 'Rozwijanie umiejętności, funkcje, problemy i arkusze maturalne.',
+      plans: [
+        {
+          name: 'Pakiet podstawowy',
+          price: 119,
+          icon: 'sprout',
+          features: [
+            '1 lekcja tygodniowo',
+            'Stały gwarantowany termin',
+            'Budowanie solidnych podstaw',
+            'Dla dzieci radzących sobie!',
+          ],
+        },
+        {
+          name: 'Pakiet rozwój',
+          price: 109,
+          icon: 'line',
+          popular: true,
+          features: [
+            '2 lekcje tygodniowo',
+            'Stały gwarantowany termin',
+            'Skuteczny rozwój umiejętności',
+            'Dla dzieci z drobnymi trudnościami!',
+          ],
+        },
+        {
+          name: 'Pakiet intensywny',
+          price: 99,
+          icon: 'target',
+          features: [
+            '3 lekcje tygodniowo',
+            'Stały gwarantowany termin',
+            'Maksymalne postępy',
+            'Dla dzieci z dużymi zaległościami!',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'extra',
+      label: 'Lekcje dodatkowe',
+      note: 'Pojedyncze zajęcia przed sprawdzianem, kartkówką lub trudnym tematem.',
+      plans: [
+        {
+          name: 'Szkoła podstawowa',
+          price: 119,
+          icon: 'sprout',
+          features: [
+            'Przygotowanie do sprawdzianu',
+            'Przygotowanie do kartkówki',
+            'Pomoc z zadaniami domowymi',
+            'Chęć zrozumienia lepiej tematu',
+          ],
+        },
+        {
+          name: 'Szkoła średnia',
+          price: 140,
+          icon: 'line',
+          popular: true,
+          features: [
+            'Przygotowanie do sprawdzianu',
+            'Przygotowanie do kartkówki',
+            'Pomoc z zadaniami domowymi',
+            'Chęć zrozumienia lepiej tematu',
+          ],
+        },
+        {
+          name: 'Klasa maturalna',
+          price: 160,
+          icon: 'target',
+          features: [
+            'Przygotowanie do sprawdzianu',
+            'Przygotowanie do kartkówki',
+            'Pomoc z zadaniami domowymi',
+            'Chęć zrozumienia lepiej tematu',
+          ],
+        },
+      ],
+    },
+  ];
+  const [selectedPricingGroupId, setSelectedPricingGroupId] = useState(pricingGroups[0].id);
+  const selectedPricingGroup = pricingGroups.find((group) => group.id === selectedPricingGroupId) ?? pricingGroups[0];
+
+  return (
+    <section id="cennik" className="relative overflow-hidden bg-[#fbfaf7] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
+      <div className="absolute left-[9%] top-16 hidden grid-cols-4 gap-5 opacity-80 lg:grid">
+        {Array.from({ length: 20 }).map((_, index) => (
+          <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
+        ))}
+      </div>
+      <div className="absolute -right-14 -top-16 hidden h-48 w-72 rotate-[-18deg] rounded-[48%] bg-[#fff0cf] lg:block" />
+      <div className="absolute -right-8 top-20 hidden h-56 w-32 rounded-[50%] border-l border-[#c6d7ce] lg:block" />
+
+      <div className="relative mx-auto max-w-[86rem]">
+        <div className="text-center">
+          <p className="text-xs font-black uppercase tracking-[0.34em] text-[#8fc1b2]">
+            Cennik Pakiety
+          </p>
+          <h2 className="relative mx-auto mt-2 inline-block text-4xl font-black leading-tight text-[#07463f] sm:text-6xl">
+            Elastyczne Pakiety Lekcyjne
+            <span className="absolute -bottom-1 left-2 h-2 w-[94%] rounded-full bg-[#f6c65f]" />
+          </h2>
+          <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-7 text-slate-700 sm:text-lg">
+            Im więcej lekcji w tygodniu, tym niższa stawka za każdą godzinę.
+            Bez długoterminowych umów - płacisz miesięcznie i rezygnujesz kiedy chcesz.
+          </p>
+          <p className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
+            <InfoIcon className="h-5 w-5" />
+            Wszystkie ceny podane są w przeliczeniu na 60-minutowe zajęcia indywidualne.
+          </p>
+        </div>
+
+        <div className="mx-auto mt-8 grid max-w-4xl gap-2 rounded-xl bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:grid-cols-3">
+          {pricingGroups.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => setSelectedPricingGroupId(group.id)}
+              className={`rounded-lg px-4 py-3 text-sm font-black transition ${
+                selectedPricingGroupId === group.id
+                  ? 'bg-[#007566] text-white shadow-[0_10px_22px_rgba(0,117,102,0.18)]'
+                  : 'text-[#07463f] hover:bg-[#e8f1ea]'
+              }`}
+            >
+              {group.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="mx-auto mt-5 max-w-2xl text-center text-sm font-semibold leading-6 text-slate-500">
+          {selectedPricingGroup.note}
+        </p>
+
+        <div className="mt-9 grid gap-6 lg:grid-cols-3">
+          {selectedPricingGroup.plans.map((item) => (
+            <PricingCard key={item.name} item={item} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingCard({ item }) {
+  const isPopular = item.popular;
+
+  return (
+    <article
+      className={`relative flex h-full flex-col rounded-xl border px-6 py-8 shadow-[0_16px_34px_rgba(15,23,42,0.06)] ${
+        isPopular
+          ? 'border-[#f6c65f] bg-[#fffaf0]'
+          : 'border-zinc-100 bg-white'
+      }`}
+    >
+      {isPopular && (
+        <div className="absolute -top-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[#f6c65f] px-6 py-2 text-xs font-black uppercase tracking-wide text-[#07463f]">
+          <StarIcon className="h-4 w-4" />
+          Najpopularniejszy
+        </div>
+      )}
+
+      <div className="flex items-start gap-5">
+        <span className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${isPopular ? 'bg-[#fff0cf] text-[#d39312]' : 'bg-[#e8f1ea] text-[#007566]'}`}>
+          <PricingIcon type={item.icon} />
+        </span>
+        <div>
+          <p className={`text-xs font-black uppercase tracking-[0.24em] ${isPopular ? 'text-[#9c6a17]' : 'text-[#0a604f]'}`}>
+            {item.name}
+          </p>
+          <p className="mt-3 text-4xl font-black leading-none text-[#07463f]">
+            {item.price} <span className="text-2xl">zł/h</span>
+          </p>
+        </div>
+      </div>
+
+      <span className="mt-5 block h-1 w-14 rounded-full bg-[#f6c65f]" />
+
+      <ul className="mt-7 flex-1 space-y-4">
+        {item.features.map((feature) => (
+          <li key={feature} className="flex gap-3 text-base font-medium leading-6 text-slate-700">
+            <CheckCircleIcon className={`mt-0.5 h-5 w-5 shrink-0 ${isPopular ? 'text-[#f0b544]' : 'text-[#007566]'}`} />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        type="button"
+        onClick={openRegisterModal}
+        className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#164f36,#0b5f4f)] px-6 py-4 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(9,64,47,0.18)] transition hover:brightness-110"
+      >
+        Wybieram pakiet
+      </button>
+    </article>
+  );
+}
+
+function PricingIcon({ type }) {
+  if (type === 'line') {
+    return <TrendingUpIcon className="h-8 w-8" />;
+  }
+
+  if (type === 'target') {
+    return <TargetIcon className="h-8 w-8" />;
+  }
+
+  return <SproutIcon className="h-8 w-8" />;
+}
+
+function LegacyPriceList() {
   const [selectedGrade, setSelectedGrade] = useState('Dopuszczający (2)');
   const [selectedGoal, setSelectedGoal] = useState('Bieżąca pomoc / spokój przy lekcjach');
   const recommendation = recommendationMap[selectedGrade];
 
   return (
-    <section id="cennik" className="relative overflow-hidden bg-[#fcfaf7] px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
+    <section id="legacy-cennik" className="relative overflow-hidden bg-[#fcfaf7] px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(159,95,44,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(159,95,44,0.07)_1px,transparent_1px)] bg-[size:28px_28px]" />
       <div className="absolute -left-28 top-20 h-80 w-80 rounded-full bg-orange-50/80 blur-3xl" />
       <div className="relative mx-auto max-w-7xl rounded-2xl border-2 border-orange-600/45 px-5 py-7 sm:px-8 sm:py-10 lg:px-10">
@@ -1364,7 +1782,7 @@ function PriceList() {
 
             <div className="mt-8 grid gap-5 sm:mt-12 sm:gap-8 xl:grid-cols-3">
               {packages.map((item) => (
-                <PricingCard key={item.name} item={item} />
+                <LegacyPricingCard key={item.name} item={item} />
               ))}
             </div>
 
@@ -1476,13 +1894,14 @@ function PriceList() {
                   </div>
                 </div>
               </div>
-              <a
-                href="#kontakt"
+              <button
+                type="button"
+                onClick={openRegisterModal}
                 className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:mt-8 sm:gap-5 sm:px-8 sm:py-5 sm:text-lg"
               >
                 Wybieram ten pakiet
                 <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-              </a>
+              </button>
               <p className="sr-only">Wybrany cel nauczania: {selectedGoal}</p>
             </article>
           </div>
@@ -1492,7 +1911,7 @@ function PriceList() {
   );
 }
 
-function PricingCard({ item }) {
+function LegacyPricingCard({ item }) {
   const isPopular = item.popular;
 
   return (
@@ -1530,8 +1949,9 @@ function PricingCard({ item }) {
           </li>
         ))}
       </ul>
-      <a
-        href="#kontakt"
+      <button
+        type="button"
+        onClick={openRegisterModal}
         className={`mt-7 inline-flex w-full items-center justify-center gap-3 rounded-md px-4 py-3.5 text-xs font-black transition sm:mt-10 sm:gap-5 sm:px-6 sm:py-4 sm:text-base ${
           isPopular
             ? 'bg-orange-600 text-white hover:bg-orange-700'
@@ -1540,7 +1960,7 @@ function PricingCard({ item }) {
       >
         {item.button}
         <ArrowRightIcon className="h-5 w-5" />
-      </a>
+      </button>
     </article>
   );
 }
@@ -1575,120 +1995,163 @@ function Benefit({ icon, text }) {
 
 
 function Corepetitors(){
-  return (
-    <section id="korepetytorzy" className="bg-orange-50">
-      <div className="relative overflow-hidden bg-[#fcfaf7] px-4 py-12 sm:px-6 sm:py-20 lg:px-10">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(159,95,44,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(159,95,44,0.07)_1px,transparent_1px)] bg-[size:28px_28px]" />
-        <div className="absolute -right-28 top-14 h-80 w-80 rounded-full bg-orange-50/80 blur-3xl" />
-        <div className="relative mx-auto max-w-7xl rounded-2xl border-2 border-orange-600/45 px-5 py-7 sm:px-8 sm:py-10 lg:px-10">
-          <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:text-sm sm:tracking-[0.45em]">
-            Korepetytorzy
-          </p>
-          <h2 className="mt-4 text-3xl font-black leading-tight text-slate-950 sm:mt-5 sm:text-6xl lg:text-7xl">
-            Poznaj swoich <span className="text-orange-600">korepetytorów</span>
-          </h2>
-          <p className="mt-4 max-w-3xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:text-xl sm:leading-9">
-            Kuba i Hubert to studenci Politechniki, którzy tłumaczą matematykę
-            prostym językiem - od podstawówki po maturę.
-          </p>
+  const [areTutorCardsExpanded, setAreTutorCardsExpanded] = useState(false);
+  const [isTutorExpansionForced, setIsTutorExpansionForced] = useState(false);
 
-          <div className="mt-8 grid gap-5 sm:mt-12 sm:gap-8 xl:grid-cols-2">
-            {tutorProfiles.map((profile) => (
-              <TutorProfileCard key={profile.name} profile={profile} />
+  useEffect(() => {
+    const expandTutors = () => {
+      setIsTutorExpansionForced(true);
+      setAreTutorCardsExpanded(true);
+    };
+
+    window.addEventListener('nastomatma:expand-tutors', expandTutors);
+
+    return () => {
+      window.removeEventListener('nastomatma:expand-tutors', expandTutors);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateExpandedState = () => {
+      if (isTutorExpansionForced) {
+        return;
+      }
+
+      setAreTutorCardsExpanded(window.scrollY > window.innerHeight * 0.28);
+    };
+
+    updateExpandedState();
+    window.addEventListener('scroll', updateExpandedState, { passive: true });
+    window.addEventListener('resize', updateExpandedState);
+
+    return () => {
+      window.removeEventListener('scroll', updateExpandedState);
+      window.removeEventListener('resize', updateExpandedState);
+    };
+  }, [isTutorExpansionForced]);
+
+  return (
+    <section id="korepetytorzy" className="bg-[#fffdf9]">
+      <div className="relative px-4 pb-12 pt-0 sm:px-6 sm:pb-16 lg:px-8">
+        <div className="mx-auto max-w-[96rem]">
+          <div className="text-center">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-[#8fc1b2]">
+              Nasi korepetytorzy
+            </p>
+            <h2 className="relative mx-auto mt-2 inline-block text-3xl font-black leading-tight text-[#07463f] sm:text-4xl">
+              Poznaj osoby, które Ci pomogą
+              <span className="absolute -bottom-2 right-7 h-2 w-28 rounded-full bg-[#cde4d8]" />
+            </h2>
+          </div>
+
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            {tutors.map((tutor) => (
+              <TutorProfileCard
+                key={tutor.name}
+                tutor={tutor}
+                isExpanded={areTutorCardsExpanded}
+              />
             ))}
           </div>
         </div>
       </div>
 
-      <ProgramSection />
     </section>
   );
 }
 
-function TutorProfileCard({ profile }) {
-  const isOrange = profile.theme === 'orange';
-  const details = isOrange
-    ? {
-        levels: '1-8 klasa,\nliceum, matura',
-        specialization: 'Matura podstawowa,\ngeometria, statyka',
-        style: 'Spokój,\ncierpliwość i\nkrok po kroku',
-        bullets: [
-          'Pomaga zrozumieć podstawy i uporządkować wiedzę.',
-          'Tłumaczy cierpliwie, krok po kroku, aż wszystko stanie się jasne.',
-          'Wspiera uczniów, którzy potrzebują pewności siebie w matematyce.',
-        ],
-        button: 'Wybierz Huberta',
-      }
-    : {
-        levels: '7-8 klasa,\nliceum, matura',
-        specialization: 'Matura rozszerzona,\nfizyka, analiza',
-        style: 'Logiczne\nmyślenie i\npraktyka',
-        bullets: [
-          'Tłumaczy trudne zagadnienia na proste przykłady.',
-          'Łączy matematykę z fizyką i pokazuje, jak to działa w praktyce.',
-          'Pomaga przełamać bariery mentalne i zrozumieć "dlaczego".',
-        ],
-        button: 'Wybierz Kubę',
-      };
+function TutorProfileCard({ tutor, isExpanded }) {
+  const details = [
+    {
+      icon: <GraduationCapIcon className="h-5 w-5" />,
+      label: 'Poziomy',
+      value: tutor.levels,
+    },
+    {
+      icon: <PackageIcon className="h-5 w-5" />,
+      label: 'Specjalizacja',
+      value: tutor.specialization,
+    },
+    {
+      icon: <HeartIcon className="h-5 w-5" />,
+      label: 'Styl',
+      value: tutor.style,
+    },
+  ];
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-orange-100 bg-white px-5 py-6 shadow-[0_18px_42px_rgba(39,40,45,0.06)] sm:px-8 sm:py-8">
-      <div className="absolute right-7 top-7 hidden grid-cols-5 gap-3 sm:grid">
-        {Array.from({ length: 25 }).map((_, index) => (
-          <span key={index} className="h-1.5 w-1.5 rounded-full bg-orange-100" />
-        ))}
-      </div>
-
-      <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
-        <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-orange-50 text-4xl font-black text-orange-600 shadow-inner sm:h-36 sm:w-36 sm:text-6xl">
-            {profile.initial}
-          </span>
+    <article className="rounded-2xl border border-zinc-200 bg-white px-6 py-7 shadow-[0_14px_28px_rgba(15,23,42,0.08)] transition-all duration-500 sm:px-8 sm:py-9 lg:px-10">
+      <div className="flex items-start gap-5">
+        <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-[#eee9df] bg-[#f5f1ea] text-3xl font-black text-[#07463f] shadow-inner sm:h-24 sm:w-24 sm:text-4xl">
+          {tutor.initial}
+        </span>
         <div>
-          <h3 className="text-3xl font-black text-slate-950 sm:text-4xl">{profile.name}</h3>
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-base font-black text-slate-800 sm:mt-4 sm:gap-3 sm:text-lg">
-            {isOrange ? <SchoolIcon className="h-5 w-5 text-orange-600 sm:h-6 sm:w-6" /> : <BoltIcon className="h-5 w-5 text-orange-600 sm:h-6 sm:w-6" />}
-              {profile.field}
-            </p>
-          <p className="mt-2 text-base font-semibold text-slate-500 sm:mt-3 sm:text-lg">{profile.year}</p>
+          <h3 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">{tutor.name}</h3>
+          <p className="mt-2 text-base font-extrabold leading-tight text-[#0a604f] sm:text-lg">
+            {tutor.field}
+          </p>
+          <p className="mt-1 text-base font-bold leading-tight text-slate-400 sm:text-lg">
+            {tutor.year}
+          </p>
         </div>
       </div>
 
-      <div className="mt-6 border-t border-orange-100 pt-5 sm:mt-8 sm:pt-6">
-        <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
-          <TutorDetail icon={<GraduationCapIcon className="h-6 w-6 sm:h-8 sm:w-8" />} label="Poziomy" value={details.levels} />
-          <TutorDetail icon={<TargetIcon className="h-6 w-6 sm:h-8 sm:w-8" />} label="Specjalizacja" value={details.specialization} />
-          <TutorDetail icon={<UsersIcon className="h-6 w-6 sm:h-8 sm:w-8" />} label="Styl" value={details.style} />
-        </div>
-      </div>
-
-      <ul className="mt-5 space-y-3 sm:mt-7 sm:space-y-4">
-        {details.bullets.map((bullet) => (
-          <li key={bullet} className="flex gap-2 text-sm font-semibold leading-6 text-slate-600 sm:gap-3 sm:text-base sm:leading-7">
-            <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-orange-600 sm:h-6 sm:w-6" />
-            <span>{bullet}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-6 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
-        {profile.tags.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-2 rounded-md bg-orange-50 px-3 py-2 text-xs font-black text-slate-600 sm:gap-3 sm:px-4 sm:py-3 sm:text-sm"
-          >
-            <TagMarkIcon className="h-4 w-4 text-orange-600 sm:h-5 sm:w-5" />
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <a
-        href="#kontakt"
-        className="mt-7 inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:mt-9 sm:gap-5 sm:px-8 sm:py-5 sm:text-lg"
+      <div
+        className={`overflow-hidden transition-all duration-700 ease-out ${
+          isExpanded
+            ? 'mt-9 max-h-[820px] opacity-100'
+            : 'mt-0 max-h-0 opacity-0'
+        }`}
+        aria-hidden={!isExpanded}
       >
-        {details.button}
-        <ArrowRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-      </a>
+        <div className="grid gap-5 text-center sm:grid-cols-3 sm:gap-6">
+          {details.map((detail) => (
+            <div key={detail.label}>
+              <span className="mx-auto flex h-7 w-7 items-center justify-center text-[#527b68]">
+                {detail.icon}
+              </span>
+              <p className="mt-2 text-xs font-black uppercase tracking-wide text-slate-300">
+                {detail.label}
+              </p>
+              <p className="mt-3 whitespace-pre-line text-sm font-black leading-5 text-slate-950 sm:text-base sm:leading-6">
+                {detail.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 border-t border-zinc-200 pt-7">
+          <blockquote className="border-l-4 border-[#c6d7ce] pl-5 text-lg font-medium italic leading-8 text-slate-500">
+          „{tutor.quote}”
+          </blockquote>
+
+          <ul className="mt-7 space-y-3">
+            {tutor.bullets.map((bullet) => (
+              <li key={bullet} className="flex gap-3 text-base font-medium leading-7 text-slate-600">
+                <span className="mt-3 h-2 w-2 shrink-0 rounded-full bg-[#0a604f]" />
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 flex flex-wrap gap-x-9 gap-y-5">
+            {tutor.tags.map((tag) => (
+              <span key={tag} className="text-base font-extrabold text-[#0a604f]">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => openContactModal()}
+            className="mt-10 inline-flex items-center gap-3 text-lg font-black text-[#0a604f] transition hover:text-[#007566]"
+          >
+            {tutor.cta}
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
     </article>
   );
 }
@@ -1710,130 +2173,128 @@ function TutorDetail({ icon, label, value }) {
 }
 
 function ProgramSection() {
-  const [activeProgramIndex, setActiveProgramIndex] = useState(0);
-  const visibleLevels = educationLevels.slice(activeProgramIndex, activeProgramIndex + 2);
-  const maxProgramIndex = educationLevels.length - 2;
-
-  const goToPreviousProgram = () => {
-    setActiveProgramIndex((index) => Math.max(0, index - 1));
-  };
-
-  const goToNextProgram = () => {
-    setActiveProgramIndex((index) => Math.min(maxProgramIndex, index + 1));
-  };
+  const offerLevels = [
+    {
+      title: 'Klasy 1-3',
+      subtitle: 'Szkoła podstawowa',
+      icon: 'sprout',
+      description: 'Pierwsze kroki w matematyce w przyjaznej i zrozumiałej formie.',
+      bullets: [
+        'Rozwijanie logicznego myślenia',
+        'Podstawowe operacje arytmetyczne',
+        'Zrozumienie miar i wielkości',
+      ],
+    },
+    {
+      title: 'Klasy 4-6',
+      subtitle: 'Szkoła podstawowa',
+      icon: 'line',
+      description: 'Rozbudowa wiedzy i umiejętności matematycznych.',
+      bullets: [
+        'Działania na ułamkach',
+        'Procenty, proporcje i skala',
+        'Geometria płaska i przestrzenna',
+      ],
+    },
+    {
+      title: 'Klasy 7-8',
+      subtitle: 'Egzamin ósmoklasisty',
+      icon: 'bars',
+      description: 'Intensywne przygotowanie do egzaminu na koniec szkoły podstawowej.',
+      bullets: [
+        'Wyrażenia algebraiczne i równania',
+        'Funkcje liniowe',
+        'Przygotowanie do egzaminu',
+      ],
+    },
+    {
+      title: 'Liceum / Matura',
+      subtitle: 'Podstawa & rozszerzenie',
+      icon: 'cap',
+      description: 'Kompleksowe przygotowanie do matury z matematyki.',
+      bullets: [
+        'Analiza matematyczna',
+        'Ciągi, granice, pochodne',
+        'Matura podstawowa i rozszerzona',
+      ],
+    },
+  ];
 
   return (
-    <section className="relative overflow-hidden bg-[#fcfaf7]">
-      <div className="relative z-10 overflow-visible bg-slate-950 px-4 pb-28 pt-16 text-white sm:px-6 sm:pb-36 sm:pt-24 lg:px-10 lg:pt-28">
-        <div className="absolute left-0 top-14 hidden grid-cols-4 gap-4 opacity-25 md:grid">
-          {Array.from({ length: 24 }).map((_, index) => (
-            <span key={index} className="h-1.5 w-1.5 rounded-full bg-orange-200" />
-          ))}
-        </div>
-        <div className="absolute -right-28 top-28 h-96 w-96 rounded-full border border-orange-600/20" />
-        <div className="absolute right-8 top-44 hidden grid-cols-3 gap-4 opacity-25 md:grid">
-          {Array.from({ length: 15 }).map((_, index) => (
-            <span key={index} className="h-1.5 w-1.5 rounded-full bg-orange-200" />
-          ))}
-        </div>
-        <svg
-          viewBox="0 0 1440 160"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-          className="absolute inset-x-0 bottom-[-1px] z-0 h-24 w-full text-[#fcfaf7] sm:h-32 lg:h-36"
-        >
-          <path
-            fill="currentColor"
-            d="M0 58c112 25 235 41 360 34 154-8 247-57 389-54 141 3 231 58 386 61 109 2 208-20 305-48v109H0V58Z"
-          />
-        </svg>
+    <section id="program" className="relative overflow-hidden bg-[#fffdf9] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
+      <div className="absolute left-[9%] top-16 hidden grid-cols-4 gap-5 opacity-80 lg:grid">
+        {Array.from({ length: 20 }).map((_, index) => (
+          <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
+        ))}
+      </div>
+      <div className="absolute -right-14 -top-16 hidden h-48 w-72 rotate-[-18deg] rounded-[48%] bg-[#fff0cf] lg:block" />
+      <div className="absolute -right-8 top-20 hidden h-56 w-32 rounded-[50%] border-l border-[#c6d7ce] lg:block" />
 
-        <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-6 sm:gap-8 lg:flex-row lg:items-start lg:justify-between">
+      <div className="relative mx-auto max-w-[86rem]">
+        <div className="text-center">
+          <p className="text-xs font-black uppercase tracking-[0.34em] text-[#8fc1b2]">
+            Oferta
+          </p>
+          <h2 className="relative mx-auto mt-2 inline-block text-4xl font-black leading-tight text-[#07463f] sm:text-6xl">
+            Poziomy nauczania
+            <span className="absolute -bottom-1 left-2 h-2 w-[94%] rounded-full bg-[#f6c65f]" />
+          </h2>
+          <p className="mx-auto mt-5 max-w-xl text-base font-medium leading-7 text-slate-700">
+            Dopasowujemy materiał do każdego etapu edukacji.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-6 sm:mt-14 md:grid-cols-2 xl:grid-cols-4">
+          {offerLevels.map((level) => (
+            <EducationCard key={level.title} level={level} />
+          ))}
+        </div>
+
+        <div className="mt-8 grid gap-5 rounded-xl bg-[#eef5ee] px-6 py-6 shadow-[0_12px_28px_rgba(15,23,42,0.04)] sm:grid-cols-[auto_1fr_auto] sm:items-center sm:px-10">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dcebe2] text-[#007566]">
+            <PaperPlaneIcon className="h-7 w-7" />
+          </span>
           <div>
-            <h2 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl lg:text-6xl">
-              Uczymy od 1. klasy{' '}
-              <br />
-              <span className="text-orange-600">do Matury</span>
-            </h2>
-            <p className="mt-4 max-w-xl text-sm font-medium leading-6 text-slate-300 sm:mt-5 sm:text-base sm:leading-7">
-              Dostosowujemy program nauczania do podstawy programowej CKE na każdym
-              etapie edukacji. Przesuwaj okienka, aby zobaczyć kolejne poziomy.
+            <h3 className="text-lg font-black text-[#07463f]">
+              Nie wiesz, który poziom będzie odpowiedni?
+            </h3>
+            <p className="mt-1 text-sm font-medium leading-6 text-slate-700">
+              Skontaktuj się z nami - pomożemy dobrać najlepszą ścieżkę nauki.
             </p>
           </div>
-
-          <div className="flex items-center gap-3 sm:gap-4 lg:mt-2">
-            <button
-              type="button"
-              onClick={goToPreviousProgram}
-              disabled={activeProgramIndex === 0}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition hover:border-orange-600 disabled:cursor-not-allowed disabled:opacity-40 sm:h-12 sm:w-12"
-              aria-label="Poprzednie poziomy nauczania"
-            >
-              <ArrowLeftIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={goToNextProgram}
-              disabled={activeProgramIndex === maxProgramIndex}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white shadow-[0_14px_28px_rgba(159,95,44,0.28)] transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40 sm:h-12 sm:w-12"
-              aria-label="Następne poziomy nauczania"
-            >
-              <ArrowRightIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="relative z-10 mt-8 flex justify-center gap-3 sm:mt-10">
-          {Array.from({ length: maxProgramIndex + 1 }).map((_, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => setActiveProgramIndex(index)}
-              className={`h-2 rounded-full transition ${
-                index === activeProgramIndex ? 'w-8 bg-orange-600' : 'w-2 bg-white/70'
-              }`}
-              aria-label={`Pokaż poziomy od ${index + 1}`}
-            />
-          ))}
-        </div>
-
-        <div className="relative z-10 mx-auto -mb-48 mt-10 max-w-5xl sm:-mb-56 sm:mt-14">
-          <div className="grid gap-5 sm:gap-8 md:grid-cols-2">
-            {visibleLevels.map((level) => (
-              <EducationCard key={level.title} level={level} />
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={openContactModal}
+            className="inline-flex items-center justify-center gap-3 rounded-lg bg-[#007566] px-6 py-3 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.18)] transition hover:bg-[#005d51]"
+          >
+            <ChatBubblesIcon className="h-5 w-5" />
+            Skontaktuj się
+          </button>
         </div>
       </div>
-      <div className="relative z-0 h-64 bg-[#fcfaf7] sm:h-72" />
     </section>
   );
 }
 
 function EducationCard({ level }) {
   return (
-    <article
-      className={`relative flex h-full min-h-[360px] flex-col rounded-xl border bg-white px-5 py-6 text-center shadow-[0_18px_42px_rgba(39,40,45,0.12)] sm:min-h-[430px] sm:px-8 sm:py-9 ${
-        level.active
-          ? 'border-orange-100 shadow-[0_18px_42px_rgba(39,40,45,0.07)]'
-          : 'border-orange-100'
-      }`}
-    >
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-orange-600 sm:h-20 sm:w-20">
+    <article className="flex min-h-[24rem] flex-col rounded-xl border border-zinc-100 bg-white px-6 py-8 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#e8f1ea] text-[#007566]">
         <LevelIcon type={level.icon} />
       </div>
-      <h3 className="mt-4 text-lg font-black text-slate-950 sm:mt-6 sm:text-xl">{level.title}</h3>
-      <p className="mx-auto mt-3 inline-flex rounded-md bg-orange-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-orange-600">
+      <h3 className="mt-5 text-2xl font-black leading-tight text-[#07463f]">{level.title}</h3>
+      <p className="mt-2 text-xs font-black uppercase tracking-wide text-[#0a604f]">
         {level.subtitle}
       </p>
-      <p className="mx-auto mt-4 max-w-xs text-xs font-semibold leading-5 text-slate-500 sm:mt-6 sm:min-h-[56px] sm:text-sm sm:leading-6">
+      <p className="mt-4 min-h-[4.5rem] text-sm font-medium leading-6 text-slate-700">
         {level.description}
       </p>
-      <div className="mt-5 flex-1 border-t border-orange-100 pt-5 text-left sm:mt-6 sm:pt-6">
-        <ul className="space-y-3 text-xs font-bold leading-5 text-slate-600 sm:space-y-4 sm:text-sm sm:leading-6">
+      <span className="mt-5 block h-1 w-12 rounded-full bg-[#f6c65f]" />
+      <div className="mt-5 flex-1 text-left">
+        <ul className="space-y-3 text-sm font-medium leading-6 text-slate-700">
           {level.bullets.map((bullet) => (
             <li key={bullet} className="flex gap-3">
-              <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 sm:h-5 sm:w-5" />
+              <span className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[#007566]" />
               <span>{bullet}</span>
             </li>
           ))}
@@ -1864,25 +2325,32 @@ function LevelIcon({ type }) {
 }
 function Contact(){
   return (
-    <section id="kontakt" className="bg-[#fffdfb] px-4 pb-12 pt-8 text-slate-950 sm:px-6 sm:pb-20 sm:pt-10 lg:px-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-600 sm:tracking-[0.45em]">
+    <section id="kontakt" className="relative overflow-hidden bg-[#fffdf9] px-4 pb-16 pt-14 text-slate-950 sm:px-6 sm:pb-24 sm:pt-20 lg:px-10">
+      <div className="absolute left-[6%] top-[48%] hidden grid-cols-4 gap-5 opacity-80 lg:grid">
+        {Array.from({ length: 20 }).map((_, index) => (
+          <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
+        ))}
+      </div>
+
+      <div className="relative mx-auto max-w-[78rem]">
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-16">
+          <div className="lg:pt-2">
+            <p className="text-xs font-black uppercase tracking-[0.34em] text-[#8fc1b2]">
               Kontakt
             </p>
-            <h2 className="mt-4 max-w-xl text-2xl font-black leading-tight sm:mt-6 sm:text-4xl">
+            <h2 className="relative mt-4 max-w-2xl text-3xl font-black leading-tight text-[#07463f] sm:text-5xl">
               Napisz lub zadzwoń do nas.
               <br />
-              <span className="text-orange-600">Porozmawiajmy o nauce.</span>
+              <span className="font-serif italic text-[#07463f]">Porozmawiajmy o nauce.</span>
+              <span className="absolute -bottom-2 left-0 h-2 w-44 rounded-full bg-[#f6c65f]" />
+              <DecorativeArrow className="absolute -right-12 top-8 hidden h-12 w-16 rotate-[-22deg] text-[#b7d5c8] sm:block" />
             </h2>
-            <p className="mt-4 max-w-md text-sm font-medium leading-6 text-slate-600 sm:mt-6 sm:text-base sm:leading-7">
+            <p className="mt-9 max-w-xl text-base font-medium leading-8 text-slate-600">
               Chętnie odpowiemy na Twoje pytania dotyczące wyboru korepetytora,
               wolnych terminów czy planu nauczania.
             </p>
-            <span className="mt-5 block h-0.5 w-12 rounded-full bg-orange-600 sm:mt-7 sm:w-14" />
 
-            <div className="mt-7 grid gap-4 sm:mt-10 sm:grid-cols-3 sm:gap-5">
+            <div className="mt-20 grid gap-6 text-center sm:grid-cols-3 lg:max-w-2xl">
               <ContactBenefit
                 icon={<ClockIcon className="h-6 w-6" />}
                 title="Szybka odpowiedź"
@@ -1905,9 +2373,9 @@ function Contact(){
             <ContactMethod
               icon={<MailIcon className="h-6 w-6 sm:h-8 sm:w-8" />}
               title="Email"
-              value="nastomatma@gmail.com"
+              value="support.nastomatma@gmail.com"
               badge="Odpowiadamy w kilka godzin"
-              href="mailto:nastomatma@gmail.com"
+              href="#kontakt"
             />
             <ContactMethod
               icon={<PhoneChatIcon className="h-6 w-6 sm:h-8 sm:w-8" />}
@@ -1915,35 +2383,30 @@ function Contact(){
               value="Szybki i bezpośredni kontakt"
               badge="Zwykle odpowiadamy od razu"
               href="#kontakt"
+              contactMode="messenger"
             />
-            <ContactMethod
-              icon={<LaptopIcon className="h-6 w-6 sm:h-8 sm:w-8" />}
-              title="Zajęcia Online i Hybrydowe"
-              value="Profesjonalne tablice wirtualne i notatki PDF po lekcji"
-              badge="Wygodnie i efektywnie"
-              href="#kontakt"
-            />
-          </div>
-        </div>
 
-        <div className="mt-8 rounded-xl border border-orange-100 bg-white px-5 py-5 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:mt-12 sm:px-8 sm:py-6">
-          <div className="flex flex-col items-center justify-between gap-5 text-center md:flex-row md:text-left">
-            <div className="flex flex-col items-center gap-4 sm:flex-row">
-              <ChatBubblesIcon className="h-9 w-9 shrink-0 text-orange-600 sm:h-12 sm:w-12" />
-              <div>
-                <h3 className="text-lg font-black sm:text-xl">Masz inne pytanie?</h3>
-                <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">
-                  Napisz do nas - doradzimy najlepsze rozwiązanie dla Ciebie.
-                </p>
+            <div className="rounded-xl bg-[#eef5ee] px-5 py-6 shadow-[0_14px_32px_rgba(15,23,42,0.04)] sm:px-6">
+              <div className="grid gap-5 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#dcebe2] text-[#007566]">
+                  <ChatBubblesIcon className="h-7 w-7" />
+                </span>
+                <div>
+                  <h3 className="text-base font-black text-[#07463f]">Masz inne pytanie?</h3>
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+                    Napisz do nas - doradzimy najlepsze rozwiązanie.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openContactModal}
+                  className="inline-flex items-center justify-center gap-3 rounded-lg bg-[#007566] px-6 py-3 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.18)] transition hover:bg-[#005d51]"
+                >
+                  Napisz do nas
+                  <ArrowRightIcon className="h-5 w-5" />
+                </button>
               </div>
             </div>
-            <a
-              href="mailto:nastomatma@gmail.com"
-              className="inline-flex w-full items-center justify-center gap-3 rounded-md bg-orange-600 px-6 py-3.5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(159,95,44,0.2)] transition hover:bg-orange-700 sm:w-auto sm:px-8 sm:py-4"
-            >
-              Napisz do nas
-              <ArrowRightIcon className="h-5 w-5" />
-            </a>
           </div>
         </div>
       </div>
@@ -1951,37 +2414,284 @@ function Contact(){
   );
 }
 
+function ContactModal({ mode = 'email', onClose }) {
+  const isMessengerMode = mode === 'messenger';
+  const contactEmail = 'support.nastomatma@gmail.com';
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState({ type: null, message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage) {
+      setStatus({ type: 'error', message: 'Wpisz wiadomość przed wysłaniem.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatus({ type: null, message: '' });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/contact/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: trimmedMessage }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Nie udało się wysłać wiadomości.');
+      }
+
+      setMessage('');
+      setStatus({ type: 'success', message: 'Wiadomość została wysłana.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error.message || 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/65 px-4 py-5 backdrop-blur-sm sm:px-6 sm:py-8"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="contact-modal-title"
+      onMouseDown={onClose}
+    >
+      <div
+        className="relative my-auto grid w-full max-w-5xl overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)] lg:grid-cols-[1.08fr_0.92fr]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.12)] transition hover:bg-[#eff8f5] hover:text-[#007566]"
+          aria-label="Zamknij panel kontaktowy"
+        >
+          <CloseIcon className="h-5 w-5" />
+        </button>
+
+        <div className="relative hidden min-h-[32rem] lg:block">
+          <img src={contactImage} alt="" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-transparent to-transparent" />
+        </div>
+
+        <div className="flex flex-col px-6 py-7 sm:px-10 sm:py-9">
+          <div className="mx-auto w-full max-w-[24rem]">
+            <div className="flex items-center justify-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#e8f1ea] text-[#007566]">
+                <ChatBubblesIcon className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-2xl font-black leading-none tracking-normal">
+                  <span className="text-slate-950">Na</span>
+                  <span className="text-[#007566]">STO</span>
+                  <span className="text-slate-950">mat</span>
+                  <span className="text-[#007566]">Ma</span>
+                </p>
+                <p className="mt-1 text-xs font-bold text-slate-400">Napisz do nas</p>
+              </div>
+            </div>
+
+            <div className="mt-7 text-center">
+              <h2 id="contact-modal-title" className="text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+                Skontaktuj się
+              </h2>
+              <p className="mt-2 text-sm font-semibold text-slate-500">
+                {isMessengerMode
+                  ? 'Napisz do nas bezpośrednio na Messengerze albo zaloguj się, żeby zobaczyć numer.'
+                  : 'Opisz krótko, z czym możemy pomóc.'}
+              </p>
+            </div>
+
+            {isMessengerMode ? (
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                    Numer telefonu
+                  </label>
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <span className="flex items-center gap-3 text-sm font-extrabold text-[#07463f]">
+                      <PhoneChatIcon className="h-5 w-5 shrink-0 text-[#007566]" />
+                      <span className="select-none blur-[3px]">+48 000 000 000</span>
+                    </span>
+                    <span className="rounded-full bg-[#e8f1ea] px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#007566]">
+                      ukryty
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    openRegisterModal();
+                    onClose();
+                  }}
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-md border-2 border-[#007566] bg-white px-5 py-3 text-center text-sm font-extrabold text-[#07463f] transition hover:bg-[#eff8f5]"
+                >
+                  Zaloguj się lub zarejestruj, żeby zobaczyć numer
+                </button>
+
+                <a
+                  href={MESSENGER_CHAT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#007566] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.2)] transition hover:bg-[#005d51]"
+                >
+                  Przejdź do czatu Messenger
+                  <ArrowRightIcon className="h-5 w-5" />
+                </a>
+
+                <p className="rounded-md bg-[#eff8f5] px-4 py-3 text-sm font-bold leading-6 text-[#07463f]">
+                  Messenger otworzy się w nowej karcie.
+                </p>
+              </div>
+            ) : (
+              <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                    Wiadomość zostanie wysłana na
+                  </label>
+                  <div className="flex items-center gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-extrabold text-[#07463f]">
+                    <MailIcon className="h-5 w-5 shrink-0 text-[#007566]" />
+                    <span>{contactEmail}</span>
+                  </div>
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                    Treść wiadomości
+                  </span>
+                  <textarea
+                    value={message}
+                  onChange={(event) => {
+                    setMessage(event.target.value);
+                    if (status.message) {
+                      setStatus({ type: null, message: '' });
+                    }
+                  }}
+                    rows={7}
+                    placeholder="Napisz, dla kogo są lekcje, jaki poziom i czego potrzebujecie."
+                    className="w-full resize-none rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#007566] focus:ring-4 focus:ring-[#007566]/10"
+                  />
+                </label>
+
+                {status.message && (
+                  <p
+                    className={`rounded-md px-4 py-3 text-sm font-bold ${
+                      status.type === 'error'
+                        ? 'bg-red-50 text-red-700'
+                        : 'bg-[#eff8f5] text-[#07463f]'
+                    }`}
+                  >
+                    {status.message}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#007566] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.2)] transition hover:bg-[#005d51]"
+                >
+                  {isSubmitting ? 'Wysyłanie...' : 'Wyślij wiadomość'}
+                  <PaperPlaneIcon className="h-5 w-5" />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 border-t border-zinc-200 bg-[#fcfaf7] px-6 py-4 sm:grid-cols-3 sm:px-10 lg:col-span-2">
+          <ContactModalBenefit icon={<ClockIcon className="h-5 w-5" />} title="Szybka odpowiedź" text="Odpowiadamy w kilka godzin" />
+          <ContactModalBenefit icon={<ShieldIcon className="h-5 w-5" />} title="Bez zobowiązań" text="Rozmowa jest darmowa" />
+          <ContactModalBenefit icon={<CheckCircleIcon className="h-5 w-5" />} title="Dobór planu" text="Pomożemy wybrać poziom" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactModalBenefit({ icon, title, text }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e8f1ea] text-[#007566]">
+        {icon}
+      </span>
+      <span>
+        <span className="block text-sm font-black text-slate-950">{title}</span>
+        <span className="mt-0.5 block text-xs font-semibold text-slate-500">{text}</span>
+      </span>
+    </div>
+  );
+}
+
 function ContactBenefit({ icon, title, text }) {
   return (
-    <article className="border-orange-100 sm:border-r sm:pr-5 last:border-r-0">
-      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-orange-100 bg-white text-orange-600 shadow-[0_10px_24px_rgba(39,40,45,0.04)] sm:h-11 sm:w-11">
+    <article>
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e8f1ea] text-[#007566]">
         {icon}
       </div>
-      <h3 className="mt-3 text-sm font-black sm:mt-4">{title}</h3>
+      <h3 className="mt-4 text-sm font-black text-[#07463f]">{title}</h3>
       <p className="mt-2 text-xs font-medium leading-5 text-slate-500">{text}</p>
     </article>
   );
 }
 
-function ContactMethod({ icon, title, value, badge, href }) {
+function ContactMethod({ icon, title, value, badge, href, contactMode = 'email' }) {
+  const handleClick = (event) => {
+    if (href === '#kontakt') {
+      event.preventDefault();
+      openContactModal(contactMode);
+    }
+  };
+
   return (
     <a
       href={href}
-      className="group flex flex-col gap-4 rounded-xl border border-orange-100 bg-white px-4 py-4 shadow-[0_14px_32px_rgba(39,40,45,0.05)] transition hover:border-orange-600/60 hover:shadow-[0_18px_38px_rgba(39,40,45,0.08)] sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-5"
+      onClick={handleClick}
+      className="group flex flex-col gap-4 rounded-xl border border-zinc-100 bg-white px-4 py-5 shadow-[0_14px_32px_rgba(15,23,42,0.05)] transition hover:border-[#b7d5c8] hover:shadow-[0_18px_38px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-6"
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-white shadow-[0_14px_30px_rgba(159,95,44,0.22)] sm:h-16 sm:w-16">
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#e8f1ea] text-[#007566] sm:h-16 sm:w-16">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-black text-slate-950 sm:text-base">{title}</span>
-        <span className="mt-1.5 block text-xs font-medium leading-5 text-slate-600 sm:mt-2 sm:text-sm sm:leading-6">
+        <span className="block text-sm font-black text-[#07463f] sm:text-base">{title}</span>
+        <span className="mt-1 block text-sm font-medium leading-5 text-slate-600">
           {value}
         </span>
-        <span className="mt-2 inline-flex rounded-md bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-slate-500 sm:mt-3 sm:px-3 sm:py-1.5 sm:text-xs">
+        <span className="mt-1 block text-sm font-medium leading-5 text-slate-400">
           {badge}
         </span>
       </span>
-      <ArrowRightIcon className="hidden h-6 w-6 shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-orange-600 sm:block" />
+      <ArrowRightIcon className="hidden h-6 w-6 shrink-0 text-slate-400 transition group-hover:translate-x-1 group-hover:text-[#007566] sm:block" />
     </a>
   );
 }

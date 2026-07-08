@@ -3,7 +3,8 @@ import { API_BASE_URL } from '../api.js';
 
 const tabs = [
   { id: 'calendar', label: 'Kalendarz', icon: 'calendar' },
-  { id: 'students', label: 'Uczniowie i czat', icon: 'chat' },
+  { id: 'students', label: 'Uczniowie', icon: 'students' },
+  { id: 'chats', label: 'Chaty', icon: 'chat' },
   { id: 'tokens', label: 'Żetony', icon: 'token' },
   { id: 'files', label: 'Wyślij pliki', icon: 'file' },
 ];
@@ -13,6 +14,22 @@ const dayLabels = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Niedz'];
 const calendarPastDays = 14;
 const calendarFutureDays = 28;
 const chatRefreshMs = 5000;
+
+const onboardingSubjectLabels = {
+  primary: 'Klasa 1-8 podstawówka',
+  matura: 'Szkoła średnia / matura',
+  other: 'Lekcje dodatkowe',
+};
+
+const tutoringFormatLabels = {
+  online: 'Zdalnie',
+  krakow: 'Na miejscu',
+};
+
+const tutorLabels = {
+  kuba: 'Kuba',
+  hubert: 'Hubert',
+};
 
 const statusMeta = {
   available: {
@@ -89,6 +106,14 @@ function formatWeekRange(weekDays) {
   const formatter = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' });
 
   return `${formatter.format(firstDay)} - ${formatter.format(lastDay)}`;
+}
+
+function formatSlotDate(isoDate) {
+  return new Intl.DateTimeFormat('pl-PL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(parseLocalDate(isoDate));
 }
 
 async function fetchCalendarSlots(weekStart) {
@@ -194,81 +219,85 @@ export function TeacherPage({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('calendar');
   const displayName = user?.full_name || user?.email || 'Nauczyciel';
   const initial = displayName.trim().charAt(0).toUpperCase() || 'N';
+  const firstName = displayName.split(' ')[0] || 'nauczycielu';
 
   return (
-    <section className="min-h-screen bg-[#f7f6f2]">
-      <TeacherHeader
-        displayName={displayName}
-        initial={initial}
+    <section className="min-h-screen bg-[#fbfaf7] text-slate-900 lg:grid lg:grid-cols-[18rem_1fr]">
+      <TeacherSidebar
+        activeTab={activeTab}
+        onChange={setActiveTab}
         onLogout={onLogout}
       />
 
-      <div className="mx-auto w-full max-w-7xl px-6 py-10 lg:px-10">
-        <p className="text-xs font-black uppercase tracking-[0.45em] text-orange-600">
-          Panel nauczyciela
-        </p>
-        <h1 className="mt-4 text-4xl font-black leading-tight text-slate-950 sm:text-6xl">
-          Cześć, {displayName.split(' ')[0] || 'nauczycielu'}
-        </h1>
-        <p className="mt-4 max-w-2xl text-lg font-medium leading-8 text-slate-500">
-          Zarządzaj dostępnością, rozmawiaj z uczniami i przesyłaj materiały po lekcjach.
-        </p>
+      <main className="min-w-0 lg:col-start-2">
+        <TeacherHeader displayName={displayName} initial={initial} />
 
-        <TeacherTabs activeTab={activeTab} onChange={setActiveTab} />
+        <div className="px-4 py-8 sm:px-6 lg:px-10">
+          <div>
+            <h1 className="text-4xl font-black leading-tight text-[#07463f] sm:text-5xl">
+              Cześć, {firstName}
+            </h1>
+            <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-slate-500">
+              Zarządzaj dostępnością, rozmawiaj z uczniami i przesyłaj materiały po lekcjach.
+            </p>
+          </div>
 
-        <div className="mt-8">
-          {activeTab === 'calendar' && <TeacherCalendar />}
-          {activeTab === 'students' && <StudentsPanel />}
-          {activeTab === 'tokens' && <TokensPanel />}
-          {activeTab === 'files' && <FilesPanel />}
+          <div className="mt-7">
+            {activeTab === 'calendar' && <TeacherCalendar />}
+            {activeTab === 'students' && <StudentsPanel mode="students" />}
+            {activeTab === 'chats' && <StudentsPanel mode="chats" />}
+            {activeTab === 'tokens' && <TokensPanel />}
+            {activeTab === 'files' && <FilesPanel />}
+          </div>
         </div>
-      </div>
+      </main>
     </section>
   );
 }
 
-function TeacherHeader({ displayName, initial, onLogout }) {
+function TeacherHeader({ displayName, initial }) {
   return (
-    <header className="bg-slate-950 text-white shadow-[0_14px_35px_rgba(15,23,42,0.14)]">
-      <div className="mx-auto flex h-24 w-full max-w-7xl items-center justify-between px-6 lg:px-10">
-        <a
-          href="/"
-          aria-label="NaSTOmatMa panel nauczyciela"
-          className="shrink-0 text-2xl font-extrabold tracking-tight sm:text-3xl"
-        >
-          <span className="text-white">Na</span>
-          <span className="text-orange-600">STO</span>
-          <span className="text-white">mat</span>
-          <span className="text-orange-600">Ma</span>
-        </a>
-
+    <header className="border-b border-zinc-200 bg-white">
+      <div className="flex min-h-20 items-center justify-end gap-4 px-4 py-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white shadow-[0_10px_24px_rgba(159,95,44,0.28)]">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
             {initial}
           </span>
-          <div className="hidden text-right sm:block">
-            <p className="text-base font-black">Nauczyciel</p>
-            <p className="max-w-[14rem] truncate text-sm font-medium text-slate-300">
-              {displayName}
-            </p>
+          <div className="hidden min-w-0 sm:block">
+            <p className="max-w-[14rem] truncate text-sm font-black text-slate-950">{displayName}</p>
+            <p className="mt-0.5 text-xs font-semibold text-slate-400">Nauczyciel</p>
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="rounded-md border border-white/20 px-4 py-3 text-sm font-bold text-slate-300 transition hover:border-orange-500 hover:text-white sm:px-5"
-          >
-            Wyloguj
-          </button>
         </div>
       </div>
     </header>
   );
 }
 
-function TeacherTabs({ activeTab, onChange }) {
+function TeacherSidebar({ activeTab, onChange, onLogout }) {
   return (
-    <div className="mt-10 rounded-lg bg-[#e9e6df] p-2">
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:h-screen lg:w-72 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+      <div className="flex items-center justify-between gap-4 lg:block">
+        <a href="/" aria-label="NaSTOmatMa" className="shrink-0 text-2xl font-extrabold tracking-tight">
+          <span className="text-slate-900">Na</span>
+          <span className="text-[#007566]">STO</span>
+          <span className="text-slate-900">mat</span>
+          <span className="text-[#007566]">Ma</span>
+        </a>
+
+        <div className="hidden rounded-xl bg-[#f6f2eb] px-4 py-4 text-sm font-bold text-[#07463f] lg:mt-12 lg:block">
+          <p>Panel nauczyciela</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+            Lekcje, uczniowie, czaty i materiały w jednym miejscu.
+          </p>
+        </div>
+      </div>
+
+      <nav className="mt-5 grid gap-6 lg:mt-10">
+        <div>
+          <p className="mb-3 px-4 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+            Nauczanie
+          </p>
+          <div className="grid gap-1">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
 
@@ -277,25 +306,36 @@ function TeacherTabs({ activeTab, onChange }) {
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-3 rounded-md px-5 py-4 text-left text-base font-black transition ${
+              className={`flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black transition ${
                 isActive
-                  ? 'bg-white text-slate-950 shadow-[0_10px_24px_rgba(39,40,45,0.08)]'
-                  : 'text-slate-700 hover:bg-white/55'
+                  ? 'bg-[#f6f2eb] text-[#07463f] shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
+                  : 'text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
               }`}
             >
-              <TeacherIcon type={tab.icon} className="h-6 w-6 shrink-0 text-orange-600" />
+              <TeacherIcon type={tab.icon} className="h-5 w-5 shrink-0" />
               <span>{tab.label}</span>
             </button>
           );
         })}
-      </div>
-    </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
+            >
+              <TeacherIcon type="logout" className="h-5 w-5 shrink-0" />
+              Wyloguj się
+            </button>
+          </div>
+        </div>
+      </nav>
+    </aside>
   );
 }
-
 function TeacherCalendar() {
   const [weekStart, setWeekStart] = useState(getWeekStart());
   const [slots, setSlots] = useState({});
+  const [upcomingLessons, setUpcomingLessons] = useState([]);
+  const [selectedLesson, setSelectedLesson] = useState(null);
   const [databaseStudents, setDatabaseStudents] = useState([]);
   const [status, setStatus] = useState({ type: null, message: '' });
   const [isLoading, setIsLoading] = useState(true);
@@ -317,6 +357,13 @@ function TeacherCalendar() {
       setSlots(Object.fromEntries(
         nextSlots.map((slot) => [slotKey(slot.date, slot.start_time), slot]),
       ));
+      setSelectedLesson((currentLesson) => {
+        if (!currentLesson) {
+          return null;
+        }
+
+        return nextSlots.find((slot) => slot.id === currentLesson.id) ?? currentLesson;
+      });
       setStatus({ type: null, message: '' });
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
@@ -328,6 +375,40 @@ function TeacherCalendar() {
   useEffect(() => {
     loadSlots();
   }, [weekStart]);
+
+  const loadUpcomingLessons = async () => {
+    try {
+      const lookupWeekStarts = Array.from({ length: 5 }, (_, index) => (
+        addDays(getWeekStart(), index * 7)
+      ));
+      const calendars = await Promise.all(
+        lookupWeekStarts.map((lookupWeekStart) => fetchCalendarSlots(lookupWeekStart)),
+      );
+      const nextLessons = calendars
+        .flatMap((calendarSlots) => calendarSlots)
+        .filter((slot) => (
+          (slot.status === 'booked' || slot.status === 'pending')
+          && !isPastSlot(slot.date, slot.start_time)
+        ))
+        .sort((firstSlot, secondSlot) => (
+          new Date(`${firstSlot.date}T${firstSlot.start_time}:00`)
+          - new Date(`${secondSlot.date}T${secondSlot.start_time}:00`)
+        ));
+
+      setUpcomingLessons(nextLessons);
+      setSelectedLesson((currentLesson) => (
+        currentLesson
+          ? nextLessons.find((slot) => slot.id === currentLesson.id) ?? currentLesson
+          : nextLessons[0] ?? null
+      ));
+    } catch {
+      setUpcomingLessons([]);
+    }
+  };
+
+  useEffect(() => {
+    loadUpcomingLessons();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -390,7 +471,13 @@ function TeacherCalendar() {
 
   const handleSlotClick = (day, startTime, slot) => {
     if (slot?.status === 'pending') {
+      setSelectedLesson(slot);
       setPendingDecisionSlot(slot);
+      return;
+    }
+
+    if (slot?.status === 'booked') {
+      setSelectedLesson(slot);
       return;
     }
 
@@ -454,6 +541,7 @@ function TeacherCalendar() {
       setSlots(Object.fromEntries(
         nextSlots.map((slot) => [slotKey(slot.date, slot.start_time), slot]),
       ));
+      await loadUpcomingLessons();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
     }
@@ -489,13 +577,15 @@ function TeacherCalendar() {
       setSlots(Object.fromEntries(
         nextSlots.map((slot) => [slotKey(slot.date, slot.start_time), slot]),
       ));
+      await loadUpcomingLessons();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
     }
   };
 
   return (
-    <section className="rounded-xl border border-orange-100 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-6">
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <section className="rounded-xl border border-zinc-200 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(15,23,42,0.05)] sm:px-6">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h2 className="text-2xl font-black text-slate-950">Kalendarz dostępności</h2>
@@ -774,6 +864,117 @@ function TeacherCalendar() {
         />
       )}
     </section>
+    <TeacherLessonsAside
+      lessons={upcomingLessons}
+      selectedLesson={selectedLesson}
+      onSelectLesson={setSelectedLesson}
+      onReviewPending={(slot) => setPendingDecisionSlot(slot)}
+    />
+    </div>
+  );
+}
+
+function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onReviewPending }) {
+  const selectedStatusMeta = selectedLesson?.status ? statusMeta[selectedLesson.status] : null;
+
+  return (
+    <aside className="rounded-xl border border-zinc-200 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(15,23,42,0.05)] 2xl:sticky 2xl:top-24 2xl:self-start">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007566]">
+          Najbliższe lekcje
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">Plan zajęć</h2>
+      </div>
+
+      <div className="mt-6 grid gap-3">
+        {lessons.length === 0 && (
+          <p className="rounded-lg border border-zinc-200 bg-[#fbfaf7] px-4 py-4 text-sm font-bold text-slate-500">
+            Brak nadchodzących lekcji.
+          </p>
+        )}
+
+        {lessons.map((lesson) => {
+          const isSelected = selectedLesson?.id === lesson.id;
+          const lessonMeta = statusMeta[lesson.status];
+
+          return (
+            <button
+              key={lesson.id}
+              type="button"
+              onClick={() => onSelectLesson(lesson)}
+              className={`rounded-lg border px-4 py-4 text-left transition ${
+                isSelected
+                  ? 'border-[#007566] bg-[#eef5ee] shadow-[0_10px_24px_rgba(7,70,63,0.1)]'
+                  : 'border-zinc-200 bg-white hover:border-[#b7d5c8] hover:bg-[#fbfaf7]'
+              }`}
+            >
+              <span className="flex items-start justify-between gap-3">
+                <span>
+                  <span className="block text-sm font-black text-slate-950">
+                    {formatSlotDate(lesson.date)}
+                  </span>
+                  <span className="mt-1 block text-sm font-bold text-slate-500">
+                    {lesson.start_time} - {lesson.end_time}
+                  </span>
+                  <span className="mt-2 block text-sm font-black text-[#07463f]">
+                    {lesson.student?.name || 'Bez przypisanego ucznia'}
+                  </span>
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                  lesson.status === 'pending'
+                    ? 'bg-red-50 text-red-700'
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {lesson.status === 'pending' ? 'Do potwierdzenia' : 'Potwierdzona'}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-7 border-t border-zinc-200 pt-6">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+          Szczegóły lekcji
+        </p>
+
+        {selectedLesson ? (
+          <div className="mt-4 space-y-5">
+            <DetailLine title="Data i czas">
+              {formatSlotDate(selectedLesson.date)}, {selectedLesson.start_time} - {selectedLesson.end_time}
+            </DetailLine>
+            <DetailLine title="Uczeń">
+              {selectedLesson.student?.name || 'Brak przypisanego ucznia'}
+            </DetailLine>
+            <DetailLine title="Status">
+              {selectedStatusMeta?.label || 'Informacja'}
+            </DetailLine>
+            {selectedLesson.status === 'pending' && (
+              <button
+                type="button"
+                onClick={() => onReviewPending(selectedLesson)}
+                className="w-full rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+              >
+                Rozpatrz prośbę
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 rounded-lg border border-zinc-200 bg-[#fbfaf7] px-4 py-4 text-sm font-bold text-slate-500">
+            Kliknij lekcję z listy, aby zobaczyć szczegóły.
+          </p>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function DetailLine({ title, children }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-black uppercase tracking-[0.12em] text-slate-400">{title}</p>
+      <div className="text-base font-semibold leading-6 text-slate-700">{children}</div>
+    </div>
   );
 }
 
@@ -898,7 +1099,24 @@ function PendingDecisionModal({ slot, onCancel, onDecision }) {
   );
 }
 
-function StudentsPanel() {
+function formatStudentPreference(value, labels, emptyText = 'Jeszcze nie dodano') {
+  if (!value) {
+    return emptyText;
+  }
+
+  return labels?.[value] ?? value;
+}
+
+function StudentInfoItem({ label, value }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-[#fcfaf7] px-4 py-4">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
+      <p className="mt-2 text-base font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function StudentsPanel({ mode = 'students' }) {
   const [databaseStudents, setDatabaseStudents] = useState([]);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -941,7 +1159,7 @@ function StudentsPanel() {
   }, []);
 
   useEffect(() => {
-    if (!selectedStudentId) {
+    if (mode !== 'chats' || !selectedStudentId) {
       setMessages([]);
       return undefined;
     }
@@ -967,7 +1185,7 @@ function StudentsPanel() {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [selectedStudentId]);
+  }, [mode, selectedStudentId]);
 
   const handleSendMessage = async (event) => {
     event.preventDefault();
@@ -985,12 +1203,22 @@ function StudentsPanel() {
     }
   };
 
+  const answers = selectedStudent?.onboarding_answers ?? {};
+  const studentSubject = formatStudentPreference(answers.subject, onboardingSubjectLabels);
+  const studentFormat = formatStudentPreference(answers.format, tutoringFormatLabels);
+  const studentTutor = formatStudentPreference(answers.tutor, tutorLabels);
+  const studentPhone = answers.phone?.trim() || 'Jeszcze nie dodany';
+  const sectionTitle = mode === 'chats' ? 'Chaty z uczniami' : 'Lista uczniów';
+  const sectionDescription = mode === 'chats'
+    ? 'Wybierz ucznia i odpisz na wiadomości.'
+    : 'Kliknij ucznia, żeby zobaczyć dane z ankiety, żetony i kontakt.';
+
   return (
     <section className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
       <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
-        <h2 className="text-2xl font-black text-slate-950">Lista uczniów</h2>
+        <h2 className="text-2xl font-black text-slate-950">{sectionTitle}</h2>
         <p className="mt-2 text-base font-medium text-slate-500">
-          Admin/nauczyciel widzi od razu wszystkich uczniów.
+          {sectionDescription}
         </p>
 
         {status.message && (
@@ -1030,45 +1258,89 @@ function StudentsPanel() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
-        <h2 className="text-2xl font-black text-slate-950">
-          {selectedStudent ? `Czat: ${selectedStudent.name}` : 'Czat'}
-        </h2>
-        <p className="mt-2 text-base font-medium text-slate-500">
-          {selectedStudent ? selectedStudent.last_message : 'Wybierz ucznia z listy.'}
-        </p>
+      {mode === 'chats' ? (
+        <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
+          <h2 className="text-2xl font-black text-slate-950">
+            {selectedStudent ? `Czat: ${selectedStudent.name}` : 'Czat'}
+          </h2>
+          <p className="mt-2 text-base font-medium text-slate-500">
+            {selectedStudent ? selectedStudent.last_message : 'Wybierz ucznia z listy.'}
+          </p>
 
-        <div className="mt-6 space-y-4">
-          {selectedStudent && messages.length === 0 && (
-            <p className="rounded-lg bg-[#fcfaf7] px-5 py-5 text-sm font-bold text-slate-500">
-              Brak wiadomości.
-            </p>
-          )}
+          <div className="mt-6 space-y-4">
+            {selectedStudent && messages.length === 0 && (
+              <p className="rounded-lg bg-[#fcfaf7] px-5 py-5 text-sm font-bold text-slate-500">
+                Brak wiadomości.
+              </p>
+            )}
 
-          {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.own ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-xl rounded-xl px-5 py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
-                <p className="text-sm font-black">{message.own ? 'Ty' : message.author} · {message.time}</p>
-                <p className="mt-2 text-base font-medium leading-7">{message.body}</p>
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.own ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-xl rounded-xl px-5 py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
+                  <p className="text-sm font-black">{message.own ? 'Ty' : message.author} · {message.time}</p>
+                  <p className="mt-2 text-base font-medium leading-7">{message.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form className="mt-6 flex gap-3" onSubmit={handleSendMessage}>
+            <input
+              type="text"
+              placeholder="Napisz wiadomość..."
+              disabled={!selectedStudent}
+              value={draftMessage}
+              onChange={(event) => setDraftMessage(event.target.value)}
+              className="h-14 min-w-0 flex-1 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-5 text-base font-medium outline-none focus:border-orange-600 focus:bg-white"
+            />
+            <button type="submit" disabled={!selectedStudent} className="rounded-md bg-orange-600 px-6 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">
+              Wyślij
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
+          <h2 className="text-2xl font-black text-slate-950">
+            {selectedStudent ? `Informacje: ${selectedStudent.name}` : 'Informacje o uczniu'}
+          </h2>
+          <p className="mt-2 text-base font-medium text-slate-500">
+            {selectedStudent ? 'Dane ucznia, preferencje z ankiety i aktualne żetony.' : 'Wybierz ucznia z listy.'}
+          </p>
+
+          {selectedStudent && (
+            <div className="mt-6">
+              <div className="flex items-start gap-4 rounded-lg bg-[#f6f2eb] px-5 py-5">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
+                  {selectedStudent.initial}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xl font-black text-slate-950">{selectedStudent.name}</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-500">{selectedStudent.email}</p>
+                  <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-black text-orange-700">
+                    {selectedStudent.tokens ?? 0} żetonów
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <StudentInfoItem label="Zakres nauczania" value={studentSubject} />
+                <StudentInfoItem label="Sposób nauczania" value={studentFormat} />
+                <StudentInfoItem label="Wybrany korepetytor" value={studentTutor} />
+                <StudentInfoItem label="Numer kontaktowy" value={studentPhone} />
+              </div>
+
+              <div className="mt-5 rounded-lg border border-zinc-200 bg-white px-4 py-4">
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-slate-400">
+                  Ostatnia wiadomość
+                </p>
+                <p className="mt-2 text-base font-semibold leading-7 text-slate-600">
+                  {selectedStudent.last_message || 'Brak wiadomości.'}
+                </p>
               </div>
             </div>
-          ))}
+          )}
         </div>
-
-        <form className="mt-6 flex gap-3" onSubmit={handleSendMessage}>
-          <input
-            type="text"
-            placeholder="Napisz wiadomość..."
-            disabled={!selectedStudent}
-            value={draftMessage}
-            onChange={(event) => setDraftMessage(event.target.value)}
-            className="h-14 min-w-0 flex-1 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-5 text-base font-medium outline-none focus:border-orange-600 focus:bg-white"
-          />
-          <button type="submit" disabled={!selectedStudent} className="rounded-md bg-orange-600 px-6 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">
-            Wyślij
-          </button>
-        </form>
-      </div>
+      )}
     </section>
   );
 }
@@ -1446,10 +1718,26 @@ function TeacherIcon({ type, className }) {
     );
   }
 
+  if (type === 'students') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 21a5 5 0 0 0-10 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a4 4 0 0 0-3-3.8M16 5.4a3 3 0 0 1 0 5.2M5 21a4 4 0 0 1 3-3.8M8 5.4a3 3 0 0 0 0 5.2" />
+      </svg>
+    );
+  }
+
   if (type === 'token') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
         <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 3c4.4 0 8 2 8 4.5S16.4 12 12 12 4 10 4 7.5 7.6 3 12 3Zm8 4.5v5c0 2.5-3.6 4.5-8 4.5s-8-2-8-4.5v-5m16 5v4c0 2.5-3.6 4.5-8 4.5s-8-2-8-4.5v-4" />
+      </svg>
+    );
+  }
+
+  if (type === 'logout') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M10 17l5-5-5-5m5 5H3m7 9h8a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3h-8" />
       </svg>
     );
   }

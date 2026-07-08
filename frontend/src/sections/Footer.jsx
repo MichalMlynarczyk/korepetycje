@@ -1,7 +1,7 @@
 const socialLinks = [
   {
     label: 'Facebook',
-    href: '#facebook',
+    href: 'https://www.facebook.com/profile.php?id=61591144089900&mibextid=wwXIfr&rdid=LMErxcEybUPiCe0v&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F191Mh71ZZi%2F%3Fmibextid%3DwwXIfr#',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
         <path
@@ -13,7 +13,7 @@ const socialLinks = [
   },
   {
     label: 'Instagram',
-    href: '#instagram',
+    href: 'https://www.instagram.com/nastomatma/',
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
         <path
@@ -29,7 +29,8 @@ const socialLinks = [
   },
   {
     label: 'E-mail',
-    href: 'mailto:kontakt@nastomatma.pl',
+    href: '#kontakt',
+    opensContactModal: true,
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
         <path
@@ -46,35 +47,43 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const openContactModal = (event) => {
+    event.preventDefault();
+    window.dispatchEvent(new CustomEvent('nastomatma:open-contact'));
+  };
+
   return (
-    <footer className="bg-slate-950 text-white shadow-[0_-18px_40px_rgba(15,23,42,0.14)]">
-      <div className="mx-auto flex min-h-28 w-full max-w-7xl flex-col items-center justify-between gap-8 px-6 py-8 sm:flex-row lg:px-10">
+    <footer className="border-t border-zinc-100 bg-[#fffdf9] text-[#07463f]">
+      <div className="mx-auto flex min-h-28 w-full max-w-[78rem] flex-col items-center justify-between gap-8 px-6 py-8 sm:flex-row lg:px-10">
         <div className="flex flex-col items-center gap-6 sm:flex-row">
           <a
             href="/"
             aria-label="NaSTOmatMa strona główna"
-            className="shrink-0 text-2xl font-extrabold tracking-tight"
+            className="shrink-0 text-xl font-extrabold tracking-tight"
           >
-            <span className="text-white">Na</span>
-            <span className="text-orange-600">STO</span>
-            <span className="text-white">mat</span>
-            <span className="text-orange-600">Ma</span>
+            <span className="text-[#07463f]">Na</span>
+            <span className="text-[#007566]">STO</span>
+            <span className="text-[#07463f]">mat</span>
+            <span className="text-[#007566]">Ma</span>
           </a>
 
-          <span className="hidden h-9 w-px bg-slate-600 sm:block" />
-
-          <p className="text-center text-sm font-semibold text-slate-400 sm:text-left">
-            © 2024 NaSTOmatMa. Wszelkie prawa zastrzeżone.
+          <p className="text-center text-sm font-medium leading-6 text-slate-400 sm:text-left">
+            © 2024 NaSTOmatMa.
+            <br />
+            Wszelkie prawa zastrzeżone.
           </p>
         </div>
 
-        <div className="flex items-center gap-8 text-slate-200">
+        <div className="flex items-center gap-5 text-slate-500">
           {socialLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
+              onClick={link.opensContactModal ? openContactModal : undefined}
+              target={link.opensContactModal ? undefined : '_blank'}
+              rel={link.opensContactModal ? undefined : 'noopener noreferrer'}
               aria-label={link.label}
-              className="transition hover:text-orange-500"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 transition hover:bg-[#e8f1ea] hover:text-[#007566]"
             >
               {link.icon}
             </a>

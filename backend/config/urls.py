@@ -17,6 +17,7 @@ api_router.register_endpoint('documents', DocumentsAPIViewSet)
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),
+    path('accounts/', include('allauth.urls')),
     path('admin/', include(wagtailadmin_urls)),
     path('documents/', include('wagtail.documents.urls')),
     path('api/auth/', include('home.urls')),
