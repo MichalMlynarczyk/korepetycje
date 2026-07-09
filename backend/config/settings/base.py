@@ -150,6 +150,26 @@ SOCIALACCOUNT_PROVIDERS = {
     },
 }
 
+if GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET:
+    SOCIALACCOUNT_PROVIDERS['google']['APPS'] = [
+        {
+            'name': 'Google',
+            'client_id': GOOGLE_OAUTH_CLIENT_ID,
+            'secret': GOOGLE_OAUTH_CLIENT_SECRET,
+            'key': '',
+        },
+    ]
+
+if FACEBOOK_OAUTH_CLIENT_ID and FACEBOOK_OAUTH_CLIENT_SECRET:
+    SOCIALACCOUNT_PROVIDERS['facebook']['APPS'] = [
+        {
+            'name': 'Facebook',
+            'client_id': FACEBOOK_OAUTH_CLIENT_ID,
+            'secret': FACEBOOK_OAUTH_CLIENT_SECRET,
+            'key': '',
+        },
+    ]
+
 WAGTAILSEARCH_BACKENDS = {
     'default': {
         'BACKEND': 'wagtail.search.backends.database',
