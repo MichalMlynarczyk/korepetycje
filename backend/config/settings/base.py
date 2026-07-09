@@ -157,6 +157,7 @@ if GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET:
             'client_id': GOOGLE_OAUTH_CLIENT_ID,
             'secret': GOOGLE_OAUTH_CLIENT_SECRET,
             'key': '',
+            'settings': {'hidden': True},
         },
     ]
 
@@ -167,6 +168,7 @@ if FACEBOOK_OAUTH_CLIENT_ID and FACEBOOK_OAUTH_CLIENT_SECRET:
             'client_id': FACEBOOK_OAUTH_CLIENT_ID,
             'secret': FACEBOOK_OAUTH_CLIENT_SECRET,
             'key': '',
+            'settings': {'hidden': True},
         },
     ]
 
