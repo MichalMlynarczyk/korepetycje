@@ -6,7 +6,11 @@ export default defineConfig({
   server: {
     allowedHosts: ['nastomatma.pl', 'www.nastomatma.pl'],
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      '/api': 'http://backend:8000',
+      '/accounts': 'http://backend:8000',
+      '/admin': 'http://backend:8000',
+      '/media': 'http://backend:8000',
+      '/static': 'http://backend:8000',
     },
   },
 });
