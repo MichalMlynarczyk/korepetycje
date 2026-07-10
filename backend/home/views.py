@@ -1,15 +1,20 @@
 import json
 from pathlib import Path
 from datetime import date, datetime, time, timedelta
+from smtplib import SMTPException
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
+from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.core.mail import BadHeaderError, send_mail
 from django.db import models, transaction
-from django.http import FileResponse, JsonResponse
+from django.http import FileResponse, HttpResponseRedirect, JsonResponse
 from django.middleware.csrf import get_token
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
@@ -96,6 +101,44 @@ def _teacher_users():
         groups=teacher_group,
         username__in=TEACHER_USERNAMES,
     ).order_by('first_name', 'email')
+
+
+def _notify_teachers_about_new_student(user, full_name):
+    for teacher in _teacher_users():
+        ChatMessage.objects.create(
+            student=user,
+            sender=user,
+            recipient=teacher,
+            body=f'Nowy uczeń {full_name} zarejestrował się w platformie.',
+            is_system=True,
+        )
+
+
+def _email_verification_url(user):
+    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    path = reverse('auth-verify-email', args=[uidb64, token])
+    return f'{settings.FRONTEND_URL.rstrip("/")}{path}'
+
+
+def _send_verification_email(user):
+    verification_url = _email_verification_url(user)
+    subject = 'Potwierdź adres e-mail w NaSTOmatMa'
+    message = (
+        f'Cześć {user.first_name or "!"}\n\n'
+        'Dziękujemy za rejestrację w NaSTOmatMa.\n'
+        'Kliknij poniższy link, aby potwierdzić adres e-mail i aktywować konto:\n\n'
+        f'{verification_url}\n\n'
+        'Jeśli to nie Ty zakładasz konto, zignoruj tę wiadomość.\n'
+    )
+
+    send_mail(
+        subject,
+        message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
 
 def _teacher_user():
@@ -1062,7 +1105,19 @@ def register(request):
         return JsonResponse({'error': 'Hasła nie są takie same.'}, status=400)
 
     User = get_user_model()
-    if User.objects.filter(username=email).exists() or User.objects.filter(email=email).exists():
+    existing_user = User.objects.filter(models.Q(username=email) | models.Q(email=email)).first()
+    if existing_user and not existing_user.is_active:
+        try:
+            _send_verification_email(existing_user)
+        except (BadHeaderError, OSError, SMTPException):
+            return JsonResponse({'error': 'Nie udało się wysłać maila weryfikacyjnego. Spróbuj ponownie później.'}, status=502)
+
+        return JsonResponse({
+            'detail': 'Konto już istnieje, ale nie zostało potwierdzone. Wysłaliśmy nowy link aktywacyjny.',
+            'requires_email_verification': True,
+        })
+
+    if existing_user:
         return JsonResponse({'error': 'Konto z tym adresem e-mail już istnieje.'}, status=409)
 
     user = User.objects.create_user(
@@ -1070,19 +1125,40 @@ def register(request):
         email=email,
         password=password,
         first_name=full_name[:150],
+        is_active=False,
     )
     StudentProfile.objects.create(user=user, full_name=full_name)
-    for teacher in _teacher_users():
-        ChatMessage.objects.create(
-            student=user,
-            sender=user,
-            recipient=teacher,
-            body=f'Nowy uczeń {full_name} zarejestrował się w platformie.',
-            is_system=True,
-        )
-    login(request, user)
+    try:
+        _send_verification_email(user)
+    except (BadHeaderError, OSError, SMTPException):
+        return JsonResponse({'error': 'Konto zostało utworzone, ale nie udało się wysłać maila weryfikacyjnego. Spróbuj zarejestrować się ponownie za chwilę.'}, status=502)
 
-    return JsonResponse({'user': _user_payload(user)}, status=201)
+    return JsonResponse({
+        'detail': 'Konto zostało utworzone. Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.',
+        'requires_email_verification': True,
+    }, status=201)
+
+
+@require_GET
+def verify_email(request, uidb64, token):
+    User = get_user_model()
+
+    try:
+        user_id = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=user_id)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        return HttpResponseRedirect(f'{settings.FRONTEND_URL.rstrip("/")}/?email_verified=invalid')
+
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        profile = getattr(user, 'student_profile', None)
+        _notify_teachers_about_new_student(user, profile.full_name if profile else user.get_full_name() or user.email)
+
+    return HttpResponseRedirect(f'{settings.FRONTEND_URL.rstrip("/")}/?email_verified=success')
 
 
 @csrf_exempt
@@ -1097,6 +1173,10 @@ def login_view(request):
 
     user = authenticate(request, username=email, password=password)
     if user is None:
+        inactive_user = get_user_model().objects.filter(username=email, is_active=False).first()
+        if inactive_user and inactive_user.check_password(password):
+            return JsonResponse({'error': 'Potwierdź adres e-mail przed logowaniem. Link aktywacyjny wysłaliśmy na Twoją skrzynkę.'}, status=403)
+
         return JsonResponse({'error': 'Nieprawidłowy e-mail lub hasło.'}, status=400)
 
     login(request, user)

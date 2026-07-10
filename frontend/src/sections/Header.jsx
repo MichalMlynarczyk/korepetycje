@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../api.js';
 import authPanelImage from '../../images/ChatGPT Image 1 lip 2026, 00_48_53.png';
 
-const GOOGLE_AUTH_URL = import.meta.env.VITE_GOOGLE_AUTH_URL;
-const FACEBOOK_AUTH_URL = import.meta.env.VITE_FACEBOOK_AUTH_URL;
+const GOOGLE_AUTH_URL = import.meta.env.VITE_GOOGLE_AUTH_URL || `${API_BASE_URL}/accounts/google/login/`;
+const FACEBOOK_AUTH_URL = import.meta.env.VITE_FACEBOOK_AUTH_URL || `${API_BASE_URL}/accounts/facebook/login/`;
 
 const navItems = [
   { label: 'O nas', href: '#korepetytorzy', action: 'expand-tutors' },
@@ -55,9 +55,14 @@ async function authRequest(path, payload) {
 export function Header({ onAuthSuccess }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState(null);
+  const [authNotice, setAuthNotice] = useState(null);
   const closeMenu = () => setIsMenuOpen(false);
-  const closeAuth = () => setAuthMode(null);
+  const closeAuth = () => {
+    setAuthMode(null);
+    setAuthNotice(null);
+  };
   const openAuth = (mode) => {
+    setAuthNotice(null);
     setAuthMode(mode);
     closeMenu();
   };
@@ -72,6 +77,36 @@ export function Header({ onAuthSuccess }) {
     return () => {
       window.removeEventListener('nastomatma:open-auth', handleOpenAuth);
     };
+  }, []);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const emailVerified = searchParams.get('email_verified');
+
+    if (!emailVerified) {
+      return;
+    }
+
+    setAuthMode('login');
+    setAuthNotice(
+      emailVerified === 'success'
+        ? {
+            type: 'success',
+            message: 'Adres e-mail został potwierdzony. Możesz się zalogować.',
+          }
+        : {
+            type: 'error',
+            message: 'Link aktywacyjny jest nieprawidłowy albo wygasł.',
+          },
+    );
+
+    searchParams.delete('email_verified');
+    const queryString = searchParams.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash}`,
+    );
   }, []);
 
   useEffect(() => {
@@ -210,13 +245,14 @@ export function Header({ onAuthSuccess }) {
           onClose={closeAuth}
           onSwitchMode={setAuthMode}
           onAuthSuccess={onAuthSuccess}
+          initialStatus={authNotice}
         />
       )}
     </>
   );
 }
 
-function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }) {
+function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess, initialStatus }) {
   const isRegister = mode === 'register';
   const [formData, setFormData] = useState({
     full_name: '',
@@ -224,7 +260,7 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }) {
     password: '',
     password_confirm: '',
   });
-  const [status, setStatus] = useState({ type: null, message: '' });
+  const [status, setStatus] = useState(initialStatus ?? { type: null, message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
@@ -252,10 +288,23 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess }) {
             },
       );
 
+      if (result.requires_email_verification) {
+        setStatus({
+          type: 'success',
+          message: result.detail ?? 'Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.',
+        });
+        setFormData((current) => ({
+          ...current,
+          password: '',
+          password_confirm: '',
+        }));
+        return;
+      }
+
       setStatus({
         type: 'success',
         message: isRegister
-          ? 'Konto zostało utworzone. Jesteś zalogowany.'
+          ? 'Konto zostało utworzone.'
           : 'Zalogowano pomyślnie.',
       });
       onAuthSuccess?.(result.user, { isRegister });

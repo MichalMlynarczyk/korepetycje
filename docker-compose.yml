@@ -74,10 +74,6 @@ services:
   frontend:
     build:
       context: ./frontend
-    environment:
-      VITE_API_BASE_URL: https://nastomatma.pl
-      VITE_GOOGLE_AUTH_URL: https://nastomatma.pl/accounts/google/login/
-      VITE_FACEBOOK_AUTH_URL: https://nastomatma.pl/accounts/facebook/login/
     ports:
       - "127.0.0.1:5173:5173"
     volumes:
