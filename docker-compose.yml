@@ -1,4 +1,17 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
   db:
     image: postgres:16-alpine
     environment:
@@ -29,8 +42,8 @@ services:
       DJANGO_DEBUG: "True"
       DJANGO_SECRET_KEY: dev-docker-change-me
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,45.93.139.211,nastomatma.pl,www.nastomatma.pl
-      FRONTEND_URL: http://nastomatma.pl
-      WAGTAILADMIN_BASE_URL: http://nastomatma.pl
+      FRONTEND_URL: https://nastomatma.pl
+      WAGTAILADMIN_BASE_URL: https://nastomatma.pl
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
       FACEBOOK_OAUTH_CLIENT_ID: ${FACEBOOK_OAUTH_CLIENT_ID:-}
@@ -47,8 +60,8 @@ services:
       POSTGRES_PASSWORD: korepetycje_dev_password
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
-      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://nastomatma.pl,http://www.nastomatma.pl
-      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://nastomatma.pl,http://www.nastomatma.pl
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,https://nastomatma.pl,https://www.nastomatma.pl
+      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,https://nastomatma.pl,https://www.nastomatma.pl
     ports:
       - "127.0.0.1:8001:8000"
     volumes:
@@ -62,11 +75,11 @@ services:
     build:
       context: ./frontend
     environment:
-      VITE_API_BASE_URL: http://nastomatma.pl
-      VITE_GOOGLE_AUTH_URL: http://nastomatma.pl/accounts/google/login/
-      VITE_FACEBOOK_AUTH_URL: http://nastomatma.pl/accounts/facebook/login/
+      VITE_API_BASE_URL: https://nastomatma.pl
+      VITE_GOOGLE_AUTH_URL: https://nastomatma.pl/accounts/google/login/
+      VITE_FACEBOOK_AUTH_URL: https://nastomatma.pl/accounts/facebook/login/
     ports:
-      - "0.0.0.0:80:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -74,5 +87,7 @@ services:
       - backend
 
 volumes:
+  caddy_data:
+  caddy_config:
   postgres_data:
   backend_media:
