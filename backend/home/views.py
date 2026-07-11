@@ -45,7 +45,7 @@ CALENDAR_WEEK_START = date(2026, 6, 15)
 CALENDAR_START_HOUR = 9
 CALENDAR_PAST_DAYS = 14
 CALENDAR_FUTURE_DAYS = 28
-TEACHER_USERNAMES = ['kuba@admin.com', 'norber@admin.com']
+TEACHER_USERNAMES = ['KubaCRF_876_@gmail.com', 'HubertCRH_987_@gmail.com']
 ALLOWED_MATERIAL_CONTENT_TYPES = {
     'application/pdf': '.pdf',
     'image/png': '.png',
@@ -82,9 +82,6 @@ def _is_teacher(user):
 
 
 def _display_name(user):
-    if user.username == 'norber@admin.com':
-        return 'Hubert'
-
     profile = getattr(user, 'student_profile', None)
     return profile.full_name if profile else user.get_full_name() or user.email or user.username
 

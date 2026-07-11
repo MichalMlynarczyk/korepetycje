@@ -35,7 +35,7 @@ services:
       sh -c "
         python manage.py migrate &&
         python manage.py sync_oauth_apps &&
-        python manage.py shell -c \"from django.contrib.auth import get_user_model; from django.contrib.auth.models import Group; User=get_user_model(); group,_=Group.objects.get_or_create(name='teacher'); teachers=[('kuba@admin.com','Kuba','admin123'),('norber@admin.com','Norbert','norbert')]; [ (lambda user,email,first_name,password: (setattr(user,'email',email), setattr(user,'first_name',first_name), user.set_password(password), user.save(), user.groups.add(group)))(* (lambda email,first_name,password: (User.objects.get_or_create(username=email, defaults={'email':email,'first_name':first_name})[0], email, first_name, password))(*teacher)) for teacher in teachers ]\" &&
+        python manage.py shell -c \"from django.contrib.auth import get_user_model; from django.contrib.auth.models import Group; User=get_user_model(); group,_=Group.objects.get_or_create(name='teacher'); teachers=[('KubaCRF_876_@gmail.com','Kuba','CTM_kgh_@'),('HubertCRH_987_@gmail.com','Hubert','CTM_kgh_@')]; [ (lambda user,email,first_name,password: (setattr(user,'email',email), setattr(user,'first_name',first_name), user.set_password(password), user.save(), user.groups.add(group)))(* (lambda email,first_name,password: (User.objects.get_or_create(username=email, defaults={'email':email,'first_name':first_name})[0], email, first_name, password))(*teacher)) for teacher in teachers ]\" &&
         python manage.py runserver 0.0.0.0:8000
       "
     environment:

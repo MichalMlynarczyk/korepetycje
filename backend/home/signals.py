@@ -12,7 +12,7 @@ import json
 from .models import ChatMessage, StudentProfile
 
 
-TEACHER_USERNAMES = ['kuba@admin.com', 'norber@admin.com']
+TEACHER_USERNAMES = ['KubaCRF_876_@gmail.com', 'HubertCRH_987_@gmail.com']
 
 
 def _social_full_name(user, sociallogin):
