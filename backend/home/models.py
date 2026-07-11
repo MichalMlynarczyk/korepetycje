@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 def student_material_upload_path(instance, filename):
@@ -99,6 +100,72 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f'{self.created_at:%Y-%m-%d %H:%M} {self.body[:40]}'
+
+
+class ChatReadState(models.Model):
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='student_chat_read_states',
+    )
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='teacher_chat_read_states',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='chat_read_states',
+    )
+    last_read_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['student', 'teacher', 'user'],
+                name='unique_chat_read_state',
+            ),
+        ]
+
+
+class StudentNotification(models.Model):
+    KIND_LESSON_ACCEPTED = 'lesson_accepted'
+    KIND_LESSON_REJECTED = 'lesson_rejected'
+    KIND_TOKENS_ADDED = 'tokens_added'
+    KIND_CHOICES = [
+        (KIND_LESSON_ACCEPTED, 'Lesson accepted'),
+        (KIND_LESSON_REJECTED, 'Lesson rejected'),
+        (KIND_TOKENS_ADDED, 'Tokens added'),
+    ]
+
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+    )
+    lesson_slot = models.ForeignKey(
+        LessonSlot,
+        on_delete=models.SET_NULL,
+        related_name='notifications',
+        null=True,
+        blank=True,
+    )
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES)
+    title = models.CharField(max_length=180)
+    message = models.TextField()
+    teacher_name = models.CharField(max_length=160, blank=True)
+    lesson_date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.student_id} {self.kind} {self.created_at:%Y-%m-%d %H:%M}'
 
 
 class StudentMaterial(models.Model):

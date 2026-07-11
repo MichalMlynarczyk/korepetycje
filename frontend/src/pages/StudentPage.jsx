@@ -8,6 +8,7 @@ import formatOnsiteImage from '../../images/A5.png';
 
 const contactPhoneDisplay = '+48 000 000 000';
 const contactPhoneHref = '+48000000000';
+const messengerChatUrl = 'https://www.facebook.com/profile.php?id=61591144089900&mibextid=wwXIfr&rdid=LMErxcEybUPiCe0v&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F191Mh71ZZi%2F%3Fmibextid%3DwwXIfr#';
 
 const tabs = [
   { id: 'calendar', label: 'Kalendarz', icon: 'calendar' },
@@ -221,18 +222,32 @@ const tutorProfiles = [
     initial: 'K',
     field: 'Inżynieria Energetyki',
     year: 'III rok Politechniki',
-    description:
-      'Wspiera uczniów w zrozumieniu matematyki od najmłodszych lat, ale jego żywiołem są matury rozszerzone, analiza matematyczna i fizyka. Potrafi przełożyć skomplikowane twierdzenia na życiowe przykłady z termodynamiki i fizyki stosowanej. Gwarantuje przełamanie barier mentalnych przed matematyką.',
-    tags: ['Matematyka SP i LO', 'Matura Rozszerzona', 'Analiza Matematyczna', 'Fizyka i Mechanika płynów', 'Równania Różniczkowe'],
+    levels: '7-8 klasa, liceum, matura',
+    specialization: 'Matura rozszerzona,\nfizyka, analiza',
+    style: 'Logiczne myślenie i\npraktyka',
+    quote: 'Tłumaczę trudne zagadnienia na proste przykłady i pokazuję, jak to działa w praktyce.',
+    bullets: [
+      'Łączy matematykę z fizyką i pokazuje zastosowania',
+      'Pomaga przełamać bariery i zrozumieć "dlaczego"',
+    ],
+    tags: ['Matematyka SP i LO', 'Matura Rozszerzona', 'Analiza Matematyczna', 'Fizyka i Mechanika'],
+    cta: 'Napisz do Kuby',
   },
   {
     name: 'Hubert',
     initial: 'H',
     field: 'Budownictwo',
     year: 'II rok Politechniki',
-    description:
-      'Wspaniale nawiązuje kontakt z dziećmi z klas podstawowych oraz maturzystami przygotowującymi się do poziomu podstawowego. Na lekcjach zawsze posługuje się rysunkiem i wyobraźnią przestrzenną. Opanował do perfekcji tłumaczenie geometrii, statyki oraz wytrzymałości materiałów.',
+    levels: '1-8 klasa, liceum, matura',
+    specialization: 'Matura podstawowa,\ngeometria, statyka',
+    style: 'Spokój, cierpliwość i krok\npo kroku',
+    quote: 'Pomagam zrozumieć podstawy i uporządkować wiedzę, krok po kroku.',
+    bullets: [
+      'Tłumaczy cierpliwie, aż wszystko stanie się jasne',
+      'Wspiera uczniów w budowaniu pewności siebie',
+    ],
     tags: ['Matematyka podstawowa', 'Geometria i stereometria', 'Mechanika budowli', 'Wytrzymałość materiałów', 'Egzamin Ósmoklasisty'],
+    cta: 'Napisz do Huberta',
   },
 ];
 
@@ -241,6 +256,14 @@ const calendarFutureDays = 28;
 const chatRefreshMs = 5000;
 const hours = ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 const dayLabels = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Niedz'];
+
+function openContactModal(mode = 'email') {
+  window.dispatchEvent(
+    new CustomEvent('nastomatma:open-contact', {
+      detail: { mode },
+    }),
+  );
+}
 
 function slotKey(date, startTime) {
   return `${date}-${startTime}`;
@@ -359,6 +382,19 @@ async function fetchTeachers() {
   return data.teachers;
 }
 
+async function fetchStudentNotifications() {
+  const response = await fetch(`${API_BASE_URL}/api/auth/notifications/`, {
+    credentials: 'include',
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Nie udało się pobrać powiadomień.');
+  }
+
+  return data.notifications;
+}
+
 async function fetchMaterials() {
   const response = await fetch(`${API_BASE_URL}/api/auth/materials/`, {
     credentials: 'include',
@@ -425,6 +461,19 @@ function formatSlotDate(isoDate) {
     day: 'numeric',
     month: 'long',
   }).format(date);
+}
+
+function formatNotificationDate(isoDate) {
+  if (!isoDate) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('pl-PL', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(isoDate));
 }
 
 function formatFileSize(size) {
@@ -514,6 +563,9 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
   const [showOnboarding, setShowOnboarding] = useState(shouldStartOnboarding);
   const [onboardingAnswers, setOnboardingAnswers] = useState(() => getInitialOnboardingAnswers(user));
   const [tokens, setTokens] = useState(user?.tokens ?? 0);
+  const [contactModalMode, setContactModalMode] = useState(null);
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+  const [lessonNotifications, setLessonNotifications] = useState([]);
   const displayName = user?.full_name || user?.email || 'Uczeń';
   const initial = displayName.trim().charAt(0).toUpperCase() || 'U';
   const firstName = displayName.split(' ')[0] || 'uczniu';
@@ -550,6 +602,71 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
     }
   }, [forceOnboarding, user?.id, user?.is_new_user, user?.role]);
 
+  useEffect(() => {
+    const handleOpenContact = (event) => {
+      setContactModalMode(event.detail?.mode === 'messenger' ? 'messenger' : 'email');
+    };
+
+    window.addEventListener('nastomatma:open-contact', handleOpenContact);
+
+    return () => {
+      window.removeEventListener('nastomatma:open-contact', handleOpenContact);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUnreadChat = () => {
+      fetchTeachers()
+        .then((teachers) => {
+          if (isMounted) {
+            setHasUnreadChat(teachers.some((teacher) => teacher.has_unread));
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadUnreadChat();
+    const intervalId = window.setInterval(loadUnreadChat, chatRefreshMs);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLessonNotifications([]);
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    const loadLessonNotifications = async () => {
+      try {
+        const notifications = await fetchStudentNotifications();
+
+        if (isMounted) {
+          setLessonNotifications(notifications);
+        }
+      } catch {
+        if (isMounted) {
+          setLessonNotifications([]);
+        }
+      }
+    };
+
+    loadLessonNotifications();
+    const intervalId = window.setInterval(loadLessonNotifications, chatRefreshMs);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [user?.id]);
+
   const handleOnboardingComplete = async (answers) => {
     if (user?.id && typeof window !== 'undefined') {
       window.localStorage.setItem(getOnboardingStorageKey(user.id), 'completed');
@@ -567,13 +684,22 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
     setActiveTab('payments');
   };
 
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+
+    if (tabId === 'profile' && hasImportantOnboarding) {
+      setShowOnboarding(true);
+    }
+  };
+
   return (
     <section className="min-h-screen bg-[#fbfaf7] text-slate-900 lg:grid lg:grid-cols-[18rem_1fr]">
       <StudentSidebar
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         onLogout={onLogout}
         hasImportantOnboarding={hasImportantOnboarding}
+        hasUnreadChat={hasUnreadChat}
       />
 
       <main className="min-w-0 lg:col-start-2">
@@ -581,6 +707,7 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
           displayName={displayName}
           initial={initial}
           tokens={tokens}
+          notifications={lessonNotifications}
         />
 
         <div className="px-4 py-8 sm:px-6 lg:px-10">
@@ -593,10 +720,6 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
             </p>
           </div>
 
-          {tabs.some((tab) => tab.id === activeTab) && (
-            <StudentTabs activeTab={activeTab} onChange={setActiveTab} />
-          )}
-
           <div className="mt-7">
             {activeTab === 'calendar' && (
               <CalendarPanel
@@ -607,7 +730,7 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
               />
             )}
             {activeTab === 'tutors' && <TutorsPanel onOpenChat={() => setActiveTab('chat')} />}
-            {activeTab === 'chat' && <ChatPanel />}
+            {activeTab === 'chat' && <ChatPanel onboardingAnswers={onboardingAnswers} />}
             {activeTab === 'notes' && <NotesPanel />}
             {activeTab === 'profile' && (
               <ProfilePanel
@@ -628,13 +751,22 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
           </div>
         </div>
       </main>
+
+      {contactModalMode && (
+        <StudentContactModal
+          mode={contactModalMode}
+          onClose={() => setContactModalMode(null)}
+        />
+      )}
     </section>
   );
 }
 
-function StudentSidebar({ activeTab, onChange, onLogout, hasImportantOnboarding }) {
+function StudentSidebar({ activeTab, onChange, onLogout, hasImportantOnboarding, hasUnreadChat }) {
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
   return (
-    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:h-screen lg:w-72 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
       <div className="flex items-center justify-between gap-4 lg:block">
         <a
           href="/"
@@ -655,38 +787,48 @@ function StudentSidebar({ activeTab, onChange, onLogout, hasImportantOnboarding 
         </div>
       </div>
 
-      <nav className="mt-5 grid gap-6 lg:mt-10">
+      <nav className="mt-5 flex flex-1 flex-col gap-6 lg:mt-10">
         <SidebarGroup title="Nauka">
           {tabs.map((item) => (
             <SidebarButton
               key={item.id}
               item={item}
               isActive={activeTab === item.id}
+              isUnread={item.id === 'chat' && hasUnreadChat}
               onClick={() => onChange(item.id)}
             />
           ))}
         </SidebarGroup>
 
-        <SidebarGroup title="Konto">
-          {accountItems.map((item) => (
-            <SidebarButton
-              key={item.id}
-              item={item}
-              isActive={activeTab === item.id}
-              isImportant={item.id === 'profile' && hasImportantOnboarding}
-              onClick={() => onChange(item.id)}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
-          >
-            <TabIcon type="logout" className="h-5 w-5 shrink-0" />
-            Wyloguj się
-          </button>
-        </SidebarGroup>
+        <div className="lg:mt-auto">
+          <SidebarGroup title="Konto">
+            {accountItems.map((item) => (
+              <SidebarButton
+                key={item.id}
+                item={item}
+                isActive={activeTab === item.id}
+                isImportant={item.id === 'profile' && hasImportantOnboarding}
+                onClick={() => onChange(item.id)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
+            >
+              <TabIcon type="logout" className="h-5 w-5 shrink-0" />
+              Wyloguj się
+            </button>
+          </SidebarGroup>
+        </div>
       </nav>
+
+      {isLogoutModalOpen && (
+        <LogoutConfirmModal
+          onCancel={() => setIsLogoutModalOpen(false)}
+          onConfirm={onLogout}
+        />
+      )}
     </aside>
   );
 }
@@ -702,17 +844,19 @@ function SidebarGroup({ title, children }) {
   );
 }
 
-function SidebarButton({ item, isActive, isImportant = false, onClick }) {
+function SidebarButton({ item, isActive, isImportant = false, isUnread = false, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black transition ${
+      className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-black transition ${
         isImportant
-          ? 'bg-orange-100 text-orange-800 shadow-[0_10px_24px_rgba(234,88,12,0.12)] ring-1 ring-orange-200 hover:bg-orange-200'
+          ? 'border-orange-200 bg-orange-100 text-orange-800 shadow-[0_10px_24px_rgba(234,88,12,0.12)] ring-1 ring-orange-200 hover:bg-orange-200'
+        : isUnread
+          ? 'border-red-700 bg-red-50 text-red-800 shadow-[0_10px_24px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
         : isActive
-          ? 'bg-[#f6f2eb] text-[#07463f] shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
-          : 'text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
+          ? 'border-transparent bg-[#f6f2eb] text-[#07463f] shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
+          : 'border-transparent text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
       }`}
     >
       <TabIcon type={item.icon} className="h-5 w-5 shrink-0" />
@@ -722,13 +866,19 @@ function SidebarButton({ item, isActive, isImportant = false, onClick }) {
           Ważne
         </span>
       )}
+      {isUnread && (
+        <span className="h-2.5 w-2.5 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.14)]" />
+      )}
     </button>
   );
 }
 
-function StudentHeader({ displayName, initial, tokens }) {
+function StudentHeader({ displayName, initial, tokens, notifications = [] }) {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationCount = notifications.length;
+
   return (
-    <header className="border-b border-zinc-200 bg-white">
+    <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
       <div className="flex min-h-20 items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-[#fbfaf7] px-4 py-2 text-sm font-black text-slate-600">
           <TabIcon type="tokens" className="h-4 w-4 text-[#07463f]" />
@@ -736,9 +886,80 @@ function StudentHeader({ displayName, initial, tokens }) {
         </div>
 
         <div className="flex min-w-0 items-center gap-4">
-          <span className="hidden h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-slate-500 sm:flex">
-            <TabIcon type="bell" className="h-5 w-5" />
-          </span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsNotificationsOpen((isOpen) => !isOpen)}
+              className={`relative flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                notificationCount > 0
+                  ? 'border-orange-200 bg-orange-50 text-orange-700 shadow-[0_8px_18px_rgba(234,88,12,0.12)]'
+                  : 'border-zinc-200 text-slate-500 hover:border-orange-200 hover:text-orange-700'
+              }`}
+              aria-label="Powiadomienia"
+            >
+              <TabIcon type="bell" className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black text-white">
+                  {notificationCount}
+                </span>
+              )}
+            </button>
+
+            {isNotificationsOpen && (
+              <div className="absolute right-0 top-12 z-50 w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-orange-100 bg-white p-4 text-left shadow-[0_18px_50px_rgba(15,23,42,0.16)]">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-base font-black text-slate-950">Powiadomienia</h2>
+                  {notificationCount > 0 && (
+                    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-black text-orange-700">
+                      {notificationCount}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {notificationCount === 0 && (
+                    <p className="rounded-lg bg-[#fcfaf7] px-4 py-4 text-sm font-bold text-slate-500">
+                      Brak nowych powiadomień o korepetycjach.
+                    </p>
+                  )}
+
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`rounded-lg border px-4 py-4 ${
+                        notification.type === 'rejected'
+                          ? 'border-red-100 bg-red-50'
+                          : notification.type === 'tokens'
+                            ? 'border-orange-100 bg-orange-50'
+                          : 'border-emerald-100 bg-emerald-50'
+                      }`}
+                    >
+                      <p className={`text-sm font-black ${
+                        notification.type === 'rejected'
+                          ? 'text-red-800'
+                          : notification.type === 'tokens'
+                            ? 'text-orange-800'
+                            : 'text-emerald-800'
+                      }`}>
+                        {notification.title}
+                      </p>
+                      <p className="mt-1 text-sm font-bold leading-6 text-slate-700">
+                        {notification.message}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
+                        {(notification.teacher_name || notification.teacherName) && (
+                          <span>{notification.teacher_name || notification.teacherName}</span>
+                        )}
+                        {notification.created_at && (
+                          <span>{formatNotificationDate(notification.created_at)}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
             {initial}
           </span>
@@ -749,34 +970,6 @@ function StudentHeader({ displayName, initial, tokens }) {
         </div>
       </div>
     </header>
-  );
-}
-
-function StudentTabs({ activeTab, onChange }) {
-  return (
-    <div className="mt-7 overflow-x-auto rounded-xl border border-zinc-200 bg-white px-3 py-2 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
-      <div className="flex min-w-max gap-2">
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeTab;
-
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-3 text-left text-sm font-black transition ${
-                isActive
-                  ? 'bg-[#eef5ee] text-[#07463f]'
-                  : 'text-slate-500 hover:bg-[#fbfaf7] hover:text-[#07463f]'
-              }`}
-            >
-              <TabIcon type={tab.icon} className="h-5 w-5 shrink-0" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -793,6 +986,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [selectedLessonPlace, setSelectedLessonPlace] = useState(lessonPlaceOptions[0].id);
   const [lessonScopeMessage, setLessonScopeMessage] = useState('');
+  const [isLessonScopeRequired, setIsLessonScopeRequired] = useState(false);
   const [upcomingLessonSlot, setUpcomingLessonSlot] = useState(null);
   const [isUpcomingLoading, setIsUpcomingLoading] = useState(false);
   const [slotToConfirm, setSlotToConfirm] = useState(null);
@@ -815,6 +1009,9 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   const preferredTeacher = preferredTutor
     ? teachers.find((teacher) => teacher.name.toLowerCase() === preferredTutor.name.toLowerCase()) ?? null
     : null;
+  const displayedTeachers = preferredTeacher
+    ? [preferredTeacher, ...teachers.filter((teacher) => teacher.id !== preferredTeacher.id)]
+    : teachers;
 
   const loadSlots = async () => {
     if (!selectedTeacherId) {
@@ -1051,6 +1248,12 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
       return;
     }
 
+    if (!lessonScopeMessage.trim()) {
+      setIsLessonScopeRequired(true);
+      setStatus({ type: 'error', message: 'Uzupełnij zakres korepetycji przed rezerwacją.' });
+      return;
+    }
+
     setSlotToConfirm(slot);
   };
 
@@ -1063,6 +1266,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
     setSelectedMobileDayIso(null);
     setSelectedSlotId(null);
     setSlotToConfirm(null);
+    setIsLessonScopeRequired(false);
   };
 
   const confirmBooking = async () => {
@@ -1457,7 +1661,13 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
           onReserve={() => openBookingConfirm(selectedSlot)}
           onCancelReservation={() => openCancelConfirm(selectedSlot)}
           scopeMessage={lessonScopeMessage}
-          onScopeMessageChange={setLessonScopeMessage}
+          onScopeMessageChange={(value) => {
+            setLessonScopeMessage(value);
+            if (value.trim()) {
+              setIsLessonScopeRequired(false);
+            }
+          }}
+          isScopeRequired={isLessonScopeRequired}
           isBooking={bookingSlotId === selectedSlot.id}
           isCanceling={cancelingSlotId === selectedSlot.id}
           canReserve={selectedSlot.status === 'available' && !isPastSlot(selectedSlot)}
@@ -1725,6 +1935,7 @@ function LessonDetailsPanel({
   onCancelReservation,
   scopeMessage,
   onScopeMessageChange,
+  isScopeRequired = false,
   isBooking,
   isCanceling,
   canReserve,
@@ -1869,10 +2080,16 @@ function LessonDetailsPanel({
             rows={4}
             maxLength={600}
             placeholder="Napisz, z czego mają być korepetycje, np. funkcja liniowa, równania, przygotowanie do sprawdzianu."
-            className="w-full resize-none rounded-lg border border-zinc-200 bg-[#fbfaf7] px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0a604f] focus:bg-white focus:ring-4 focus:ring-[#0a604f]/10 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-slate-400"
+            className={`w-full resize-none rounded-lg border bg-[#fbfaf7] px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-slate-400 ${
+              isScopeRequired
+                ? 'lesson-scope-required border-red-700 focus:border-red-700 focus:ring-4 focus:ring-red-700/15'
+                : 'border-zinc-200 focus:border-[#0a604f] focus:ring-4 focus:ring-[#0a604f]/10'
+            }`}
           />
-          <p className="mt-1 text-xs font-semibold text-slate-400">
-            Wiadomość zostanie wysłana do korepetytora po rezerwacji terminu.
+          <p className={`mt-1 text-xs font-semibold ${isScopeRequired ? 'text-red-700' : 'text-slate-400'}`}>
+            {isScopeRequired
+              ? 'Uzupełnij zakres korepetycji przed rezerwacją.'
+              : 'Wiadomość zostanie wysłana do korepetytora po rezerwacji terminu.'}
           </p>
         </DetailBlock>
 
@@ -1933,62 +2150,33 @@ function DetailBlock({ title, children }) {
 
 function TutorsPanel({ onOpenChat }) {
   return (
-    <section className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-8">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-slate-950">Korepetytorzy</h2>
-          <p className="mt-2 max-w-3xl text-base font-medium leading-7 text-slate-500">
-            Poznaj korepetytorów NaSTOmatMa i wybierz osobę najlepiej dopasowaną do aktualnych potrzeb.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenChat}
-          className="inline-flex items-center justify-center rounded-md bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
-        >
-          Wyślij wiadomość
-        </button>
+    <section className="bg-[#fffdf9]">
+      <div className="text-center">
+        <p className="text-sm font-black uppercase tracking-[0.22em] text-[#8fc1b2]">
+          Nasi korepetytorzy
+        </p>
+        <h2 className="relative mx-auto mt-2 inline-block text-3xl font-black leading-tight text-[#07463f] sm:text-4xl">
+          Poznaj osoby, które Ci pomogą
+          <span className="absolute -bottom-2 right-7 h-2 w-28 rounded-full bg-[#cde4d8]" />
+        </h2>
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-2">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {tutorProfiles.map((tutor) => (
-          <article key={tutor.name} className="rounded-xl border border-orange-100 bg-[#fcfaf7] px-6 py-6">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-orange-600 text-3xl font-black text-white shadow-[0_10px_24px_rgba(159,95,44,0.22)]">
-                {tutor.initial}
-              </span>
-              <div>
-                <h3 className="text-3xl font-black text-slate-950">{tutor.name}</h3>
-                <p className="mt-2 text-base font-black text-orange-600">{tutor.field}</p>
-                <p className="mt-1 text-sm font-bold text-slate-500">{tutor.year}</p>
-              </div>
-            </div>
-
-            <p className="mt-6 text-base font-medium leading-7 text-slate-600">
-              {tutor.description}
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              {tutor.tags.map((tag) => (
-                <span key={tag} className="rounded-md bg-white px-3 py-2 text-xs font-black text-slate-600">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </article>
+          <StudentTutorProfileCard key={tutor.name} tutor={tutor} onOpenChat={onOpenChat} />
         ))}
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <TutorContactCard
           title="Email"
-          value="nastomatma@gmail.com"
-          href="mailto:nastomatma@gmail.com"
+          value="support.nastomatma@gmail.com"
+          onClick={() => openContactModal('email')}
         />
         <TutorContactCard
           title="Messenger / WhatsApp"
           value="Szybki i bezpośredni kontakt"
-          href="#"
+          onClick={() => openContactModal('messenger')}
         />
         <button
           type="button"
@@ -2005,15 +2193,300 @@ function TutorsPanel({ onOpenChat }) {
   );
 }
 
-function TutorContactCard({ title, value, href }) {
+function TutorContactCard({ title, value, onClick }) {
   return (
-    <a
-      href={href}
-      className="rounded-xl border border-orange-100 bg-[#fcfaf7] px-5 py-5 transition hover:border-orange-300 hover:bg-orange-50"
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl border border-orange-100 bg-[#fcfaf7] px-5 py-5 text-left transition hover:border-orange-300 hover:bg-orange-50"
     >
       <span className="block text-base font-black text-slate-950">{title}</span>
       <span className="mt-2 block text-sm font-semibold leading-6 text-slate-500">{value}</span>
-    </a>
+    </button>
+  );
+}
+
+function StudentContactModal({ mode, onClose }) {
+  const isMessengerMode = mode === 'messenger';
+  const contactEmail = 'support.nastomatma@gmail.com';
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState({ type: null, message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage) {
+      setStatus({ type: 'error', message: 'Wpisz wiadomość przed wysłaniem.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatus({ type: null, message: '' });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/contact/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: trimmedMessage }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Nie udało się wysłać wiadomości.');
+      }
+
+      setMessage('');
+      setStatus({ type: 'success', message: 'Wiadomość została wysłana.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error.message || 'Nie udało się wysłać wiadomości. Spróbuj ponownie później.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/65 px-4 py-5 backdrop-blur-sm sm:px-6 sm:py-8"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="student-contact-modal-title"
+      onMouseDown={onClose}
+    >
+      <div
+        className="relative my-auto w-full max-w-xl rounded-lg border border-zinc-200 bg-white px-6 py-7 shadow-[0_28px_90px_rgba(15,23,42,0.28)] sm:px-10 sm:py-9"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.12)] transition hover:bg-[#eff8f5] hover:text-[#007566]"
+          aria-label="Zamknij panel kontaktowy"
+        >
+          ×
+        </button>
+
+        <div className="flex items-center justify-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#e8f1ea] text-[#007566]">
+            <TabIcon type="chat" className="h-7 w-7" />
+          </div>
+          <div>
+            <p className="text-2xl font-black leading-none tracking-normal">
+              <span className="text-slate-950">Na</span>
+              <span className="text-[#007566]">STO</span>
+              <span className="text-slate-950">mat</span>
+              <span className="text-[#007566]">Ma</span>
+            </p>
+            <p className="mt-1 text-xs font-bold text-slate-400">Napisz do nas</p>
+          </div>
+        </div>
+
+        <div className="mt-7 text-center">
+          <h2 id="student-contact-modal-title" className="text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+            Skontaktuj się
+          </h2>
+          <p className="mt-2 text-sm font-semibold text-slate-500">
+            {isMessengerMode
+              ? 'Napisz do nas bezpośrednio na Messengerze albo skorzystaj z numeru telefonu.'
+              : 'Opisz krótko, z czym możemy pomóc.'}
+          </p>
+        </div>
+
+        {isMessengerMode ? (
+          <div className="mt-6 space-y-4">
+            <a
+              href={`tel:${contactPhoneHref}`}
+              className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-extrabold text-[#07463f] transition hover:border-[#b7d5c8] hover:bg-[#eff8f5]"
+            >
+              <span className="flex items-center gap-3">
+                <TabIcon type="chat" className="h-5 w-5 shrink-0 text-[#007566]" />
+                Numer telefonu
+              </span>
+              <span>{contactPhoneDisplay}</span>
+            </a>
+
+            <a
+              href={messengerChatUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#007566] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.2)] transition hover:bg-[#005d51]"
+            >
+              Przejdź do czatu Messenger
+              <span aria-hidden="true">→</span>
+            </a>
+
+            <p className="rounded-md bg-[#eff8f5] px-4 py-3 text-sm font-bold leading-6 text-[#07463f]">
+              Messenger otworzy się w nowej karcie.
+            </p>
+          </div>
+        ) : (
+          <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+            <div>
+              <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                Wiadomość zostanie wysłana na
+              </label>
+              <div className="flex items-center gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-extrabold text-[#07463f]">
+                <TabIcon type="file" className="h-5 w-5 shrink-0 text-[#007566]" />
+                <span>{contactEmail}</span>
+              </div>
+            </div>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
+                Treść wiadomości
+              </span>
+              <textarea
+                value={message}
+                onChange={(event) => {
+                  setMessage(event.target.value);
+                  if (status.message) {
+                    setStatus({ type: null, message: '' });
+                  }
+                }}
+                rows={7}
+                placeholder="Napisz, dla kogo są lekcje, jaki poziom i czego potrzebujecie."
+                className="w-full resize-none rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#007566] focus:ring-4 focus:ring-[#007566]/10"
+              />
+            </label>
+
+            {status.message && (
+              <p
+                className={`rounded-md px-4 py-3 text-sm font-bold ${
+                  status.type === 'error'
+                    ? 'bg-red-50 text-red-700'
+                    : 'bg-[#eff8f5] text-[#07463f]'
+                }`}
+              >
+                {status.message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#007566] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.2)] transition hover:bg-[#005d51] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? 'Wysyłanie...' : 'Wyślij wiadomość'}
+              <span aria-hidden="true">→</span>
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentTutorProfileCard({ tutor, onOpenChat }) {
+  const details = [
+    {
+      icon: <TabIcon type="profile" className="h-5 w-5" />,
+      label: 'Poziomy',
+      value: tutor.levels,
+    },
+    {
+      icon: <TabIcon type="file" className="h-5 w-5" />,
+      label: 'Specjalizacja',
+      value: tutor.specialization,
+    },
+    {
+      icon: <TabIcon type="tokens" className="h-5 w-5" />,
+      label: 'Styl',
+      value: tutor.style,
+    },
+  ];
+
+  return (
+    <article className="rounded-2xl border border-zinc-200 bg-white px-6 py-7 shadow-[0_14px_28px_rgba(15,23,42,0.08)] sm:px-8 sm:py-9 lg:px-10">
+      <div className="flex items-start gap-5">
+        <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-[#eee9df] bg-[#f5f1ea] text-3xl font-black text-[#07463f] shadow-inner sm:h-24 sm:w-24 sm:text-4xl">
+          {tutor.initial}
+        </span>
+        <div>
+          <h3 className="text-4xl font-black leading-none text-slate-950 sm:text-5xl">{tutor.name}</h3>
+          <p className="mt-2 text-base font-extrabold leading-tight text-[#0a604f] sm:text-lg">
+            {tutor.field}
+          </p>
+          <p className="mt-1 text-base font-bold leading-tight text-slate-400 sm:text-lg">
+            {tutor.year}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-9">
+        <div className="grid gap-5 text-center sm:grid-cols-3 sm:gap-6">
+          {details.map((detail) => (
+            <div key={detail.label}>
+              <span className="mx-auto flex h-7 w-7 items-center justify-center text-[#527b68]">
+                {detail.icon}
+              </span>
+              <p className="mt-2 text-xs font-black uppercase tracking-wide text-slate-300">
+                {detail.label}
+              </p>
+              <p className="mt-3 whitespace-pre-line text-sm font-black leading-5 text-slate-950 sm:text-base sm:leading-6">
+                {detail.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 border-t border-zinc-200 pt-7">
+          <blockquote className="border-l-4 border-[#c6d7ce] pl-5 text-lg font-medium italic leading-8 text-slate-500">
+            „{tutor.quote}”
+          </blockquote>
+
+          <ul className="mt-7 space-y-3">
+            {tutor.bullets.map((bullet) => (
+              <li key={bullet} className="flex gap-3 text-base font-medium leading-7 text-slate-600">
+                <span className="mt-3 h-2 w-2 shrink-0 rounded-full bg-[#0a604f]" />
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-8 flex flex-wrap gap-x-9 gap-y-5">
+            {tutor.tags.map((tag) => (
+              <span key={tag} className="text-base font-extrabold text-[#0a604f]">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenChat}
+            className="mt-10 inline-flex items-center gap-3 text-lg font-black text-[#0a604f] transition hover:text-[#007566]"
+          >
+            {tutor.cta}
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -2539,6 +3012,54 @@ function DeleteAccountModal({ error, isDeleting, onCancel, onConfirm }) {
   );
 }
 
+function LogoutConfirmModal({ onCancel, onConfirm }) {
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="logout-title"
+      onMouseDown={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white px-6 py-6 shadow-[0_28px_80px_rgba(15,23,42,0.35)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+            <WarningIcon className="h-6 w-6" />
+          </span>
+          <div>
+            <h3 id="logout-title" className="text-xl font-black text-slate-950">
+              Czy na pewno chcesz się wylogować?
+            </h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+              Po potwierdzeniu wrócisz do strony głównej i trzeba będzie zalogować się ponownie.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-zinc-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:border-slate-400"
+          >
+            Anuluj
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+          >
+            Tak, wyloguj się
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OnboardingSurvey({ user, forceNameStep, initialAnswers, onComplete }) {
   const hasKnownName = Boolean(user?.full_name && !user.full_name.includes('@'));
   const includeNameStep = forceNameStep || !hasKnownName;
@@ -2944,13 +3465,20 @@ function WarningIcon({ className }) {
   );
 }
 
-function ChatPanel() {
+function ChatPanel({ onboardingAnswers }) {
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
   const [status, setStatus] = useState({ type: null, message: '' });
   const selectedTeacher = teachers.find((teacher) => teacher.id === selectedTeacherId) ?? null;
+  const preferredTutor = onboardingTutors.find((tutor) => tutor.id === onboardingAnswers?.tutor) ?? null;
+  const preferredTeacher = preferredTutor
+    ? teachers.find((teacher) => teacher.name.toLowerCase() === preferredTutor.name.toLowerCase()) ?? null
+    : null;
+  const displayedTeachers = preferredTeacher
+    ? [preferredTeacher, ...teachers.filter((teacher) => teacher.id !== preferredTeacher.id)]
+    : teachers;
 
   useEffect(() => {
     let isMounted = true;
@@ -2967,7 +3495,11 @@ function ChatPanel() {
             return currentId;
           }
 
-          return teachersFromApi[0]?.id ?? null;
+          const preferredTeacherFromApi = preferredTutor
+            ? teachersFromApi.find((teacher) => teacher.name.toLowerCase() === preferredTutor.name.toLowerCase())
+            : null;
+
+          return preferredTeacherFromApi?.id ?? teachersFromApi[0]?.id ?? null;
         });
       })
       .catch((error) => {
@@ -2984,7 +3516,7 @@ function ChatPanel() {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [preferredTutor]);
 
   useEffect(() => {
     if (!selectedTeacherId) {
@@ -3042,24 +3574,57 @@ function ChatPanel() {
             </p>
           )}
 
-          {teachers.map((teacher) => (
-            <button
-              key={teacher.id}
-              type="button"
-              onClick={() => setSelectedTeacherId(teacher.id)}
-              className={`flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left transition ${
-                teacher.id === selectedTeacherId ? 'bg-orange-50' : 'bg-[#fcfaf7] hover:bg-orange-50'
-              }`}
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-lg font-black text-white">
-                {teacher.initial}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-base font-black text-slate-950">{teacher.name}</span>
-                <span className="block truncate text-sm font-semibold text-slate-500">{teacher.last_message}</span>
-              </span>
-            </button>
-          ))}
+          {displayedTeachers.map((teacher) => {
+            const isSelected = teacher.id === selectedTeacherId;
+            const isPreferred = preferredTeacher?.id === teacher.id;
+            const hasUnread = Boolean(teacher.has_unread);
+
+            return (
+              <button
+                key={teacher.id}
+                type="button"
+                onClick={() => setSelectedTeacherId(teacher.id)}
+                className={`flex w-full items-center gap-4 rounded-lg border text-left transition ${
+                  hasUnread
+                    ? 'border-red-700 bg-red-50 px-5 py-5 shadow-[0_14px_30px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
+                  : isPreferred
+                    ? 'border-[#007566] bg-[#eef5ee] px-5 py-5 shadow-[0_14px_30px_rgba(0,117,102,0.12)] ring-2 ring-[#b7d5c8]'
+                    : isSelected
+                      ? 'border-orange-200 bg-orange-50 px-4 py-4'
+                      : 'border-transparent bg-[#fcfaf7] px-4 py-4 hover:bg-orange-50'
+                }`}
+              >
+                <span className={`flex shrink-0 items-center justify-center rounded-full font-black text-white ${
+                  isPreferred
+                    ? 'h-16 w-16 bg-[#007566] text-2xl shadow-[0_12px_24px_rgba(0,117,102,0.22)]'
+                    : 'h-12 w-12 bg-orange-600 text-lg'
+                }`}>
+                  {teacher.initial}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block font-black ${isPreferred ? 'text-xl text-[#07463f]' : 'text-base text-slate-950'}`}>
+                    {teacher.name}
+                  </span>
+                  {hasUnread && (
+                    <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700">
+                      Nowa wiadomość
+                    </span>
+                  )}
+                  {isPreferred && (
+                    <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#007566]">
+                      Wybrany korepetytor
+                    </span>
+                  )}
+                  <span className={`block truncate font-semibold ${isPreferred ? 'mt-2 text-sm text-[#527b68]' : 'text-sm text-slate-500'}`}>
+                    {teacher.last_message}
+                  </span>
+                </span>
+                {hasUnread && (
+                  <span className="h-3 w-3 shrink-0 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.14)]" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -1,8 +1,13 @@
 from allauth.account.signals import user_signed_up
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.mail import BadHeaderError, send_mail
 from django.db import transaction
 from django.dispatch import receiver
+from django.utils import timezone
+from smtplib import SMTPException
+import json
 
 from .models import ChatMessage, StudentProfile
 
@@ -36,6 +41,31 @@ def _teacher_users():
     )
 
 
+def _send_new_student_notification_email(user, profile):
+    created_at = profile.created_at if profile else user.date_joined
+    local_created_at = timezone.localtime(created_at)
+    onboarding_answers = profile.onboarding_answers if profile else {}
+    message = (
+        'Nowy uczeń zarejestrował się w NaSTOmatMa.\n\n'
+        f'ID użytkownika: {user.id}\n'
+        f'Imię i nazwisko: {profile.full_name if profile else user.get_full_name() or user.email or user.username}\n'
+        f'E-mail: {user.email or "Brak"}\n'
+        f'Login: {user.username}\n'
+        f'Liczba żetonów: {profile.tokens if profile else 0}\n'
+        f'Data dodania konta: {local_created_at:%d.%m.%Y %H:%M}\n\n'
+        'Odpowiedzi z ankiety:\n'
+        f'{json.dumps(onboarding_answers, ensure_ascii=False, indent=2)}\n'
+    )
+
+    send_mail(
+        subject='Nowy uczeń',
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[settings.NEW_STUDENT_EMAIL],
+        fail_silently=False,
+    )
+
+
 @receiver(user_signed_up)
 def create_student_profile_for_social_signup(request, user, sociallogin=None, **kwargs):
     if user.groups.filter(name='teacher').exists():
@@ -64,3 +94,8 @@ def create_student_profile_for_social_signup(request, user, sociallogin=None, **
                 body=f'Nowy uczeń {full_name} zarejestrował się w platformie.',
                 is_system=True,
             )
+
+    try:
+        _send_new_student_notification_email(user, profile)
+    except (BadHeaderError, OSError, SMTPException):
+        return

@@ -26,6 +26,7 @@ urlpatterns = [
     path('materials/upload/', views.material_upload, name='material-upload'),
     path('materials/<int:material_id>/download/', views.material_download, name='material-download'),
     path('teachers/', views.teachers_list, name='teachers-list'),
+    path('notifications/', views.student_notifications, name='student-notifications'),
     path('chat/', views.student_chat_messages, name='student-chat-messages'),
     path('chat/<int:student_id>/', views.chat_messages, name='chat-messages'),
 ]

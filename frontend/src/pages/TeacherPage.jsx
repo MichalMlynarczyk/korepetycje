@@ -31,6 +31,13 @@ const tutorLabels = {
   hubert: 'Hubert',
 };
 
+const studentTutorFilters = [
+  { id: 'all', label: 'Wszyscy' },
+  { id: 'kuba', label: 'Kuba' },
+  { id: 'hubert', label: 'Hubert' },
+  { id: 'none', label: 'Nie wybrali' },
+];
+
 const statusMeta = {
   available: {
     label: 'Jestem dostępny',
@@ -166,14 +173,14 @@ async function uploadStudentMaterial(formData) {
   return data.material;
 }
 
-async function updateStudentTokens(studentId, action, amount) {
+async function updateStudentTokens(studentId, action, amount, password) {
   const response = await fetch(`${API_BASE_URL}/api/auth/students/${studentId}/tokens/`, {
     method: 'POST',
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ action, amount }),
+    body: JSON.stringify({ action, amount, password }),
   });
   const data = await response.json();
 
@@ -217,9 +224,32 @@ async function sendChatMessage(studentId, body) {
 
 export function TeacherPage({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('calendar');
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const displayName = user?.full_name || user?.email || 'Nauczyciel';
   const initial = displayName.trim().charAt(0).toUpperCase() || 'N';
   const firstName = displayName.split(' ')[0] || 'nauczycielu';
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUnreadChat = () => {
+      fetchStudents()
+        .then((students) => {
+          if (isMounted) {
+            setHasUnreadChat(students.some((student) => student.has_unread));
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadUnreadChat();
+    const intervalId = window.setInterval(loadUnreadChat, chatRefreshMs);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   return (
     <section className="min-h-screen bg-[#fbfaf7] text-slate-900 lg:grid lg:grid-cols-[18rem_1fr]">
@@ -227,6 +257,7 @@ export function TeacherPage({ user, onLogout }) {
         activeTab={activeTab}
         onChange={setActiveTab}
         onLogout={onLogout}
+        hasUnreadChat={hasUnreadChat}
       />
 
       <main className="min-w-0 lg:col-start-2">
@@ -257,9 +288,12 @@ export function TeacherPage({ user, onLogout }) {
 
 function TeacherHeader({ displayName, initial }) {
   return (
-    <header className="border-b border-zinc-200 bg-white">
+    <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
       <div className="flex min-h-20 items-center justify-end gap-4 px-4 py-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-4">
+          <span className="hidden h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-slate-500 sm:flex">
+            <TeacherIcon type="bell" className="h-5 w-5" />
+          </span>
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
             {initial}
           </span>
@@ -273,9 +307,11 @@ function TeacherHeader({ displayName, initial }) {
   );
 }
 
-function TeacherSidebar({ activeTab, onChange, onLogout }) {
+function TeacherSidebar({ activeTab, onChange, onLogout, hasUnreadChat }) {
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
   return (
-    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:h-screen lg:w-72 lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
       <div className="flex items-center justify-between gap-4 lg:block">
         <a href="/" aria-label="NaSTOmatMa" className="shrink-0 text-2xl font-extrabold tracking-tight">
           <span className="text-slate-900">Na</span>
@@ -292,7 +328,7 @@ function TeacherSidebar({ activeTab, onChange, onLogout }) {
         </div>
       </div>
 
-      <nav className="mt-5 grid gap-6 lg:mt-10">
+      <nav className="mt-5 flex flex-1 flex-col gap-6 lg:mt-10">
         <div>
           <p className="mb-3 px-4 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
             Nauczanie
@@ -300,26 +336,40 @@ function TeacherSidebar({ activeTab, onChange, onLogout }) {
           <div className="grid gap-1">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
+          const isUnread = tab.id === 'chats' && hasUnreadChat;
 
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black transition ${
-                isActive
-                  ? 'bg-[#f6f2eb] text-[#07463f] shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
-                  : 'text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
+              className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-black transition ${
+                isUnread
+                  ? 'border-red-700 bg-red-50 text-red-800 shadow-[0_10px_24px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
+                  : isActive
+                    ? 'border-transparent bg-[#f6f2eb] text-[#07463f] shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
+                    : 'border-transparent text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
               }`}
             >
               <TeacherIcon type={tab.icon} className="h-5 w-5 shrink-0" />
-              <span>{tab.label}</span>
+              <span className="min-w-0 flex-1">{tab.label}</span>
+              {isUnread && (
+                <span className="h-2.5 w-2.5 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.14)]" />
+              )}
             </button>
           );
         })}
+          </div>
+        </div>
+
+        <div className="lg:mt-auto">
+          <p className="mb-3 px-4 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+            Konto
+          </p>
+          <div className="grid gap-1">
             <button
               type="button"
-              onClick={onLogout}
+              onClick={() => setIsLogoutModalOpen(true)}
               className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
             >
               <TeacherIcon type="logout" className="h-5 w-5 shrink-0" />
@@ -328,6 +378,13 @@ function TeacherSidebar({ activeTab, onChange, onLogout }) {
           </div>
         </div>
       </nav>
+
+      {isLogoutModalOpen && (
+        <LogoutConfirmModal
+          onCancel={() => setIsLogoutModalOpen(false)}
+          onConfirm={onLogout}
+        />
+      )}
     </aside>
   );
 }
@@ -341,7 +398,7 @@ function TeacherCalendar() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMobileDayIso, setSelectedMobileDayIso] = useState(null);
   const [reservationSlot, setReservationSlot] = useState(null);
-  const [pendingDecisionSlot, setPendingDecisionSlot] = useState(null);
+  const [pendingDecision, setPendingDecision] = useState(null);
   const clickTimerRef = useRef(null);
   const weekDays = getWeekDays(weekStart);
   const selectedMobileDay = weekDays.find((day) => day.isoDate === selectedMobileDayIso) ?? null;
@@ -367,6 +424,10 @@ function TeacherCalendar() {
       setStatus({ type: null, message: '' });
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
+      if (error.message.includes('hasło')) {
+        setAreTokenControlsUnlocked(false);
+        setTokenPassword('');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -398,7 +459,7 @@ function TeacherCalendar() {
       setUpcomingLessons(nextLessons);
       setSelectedLesson((currentLesson) => (
         currentLesson
-          ? nextLessons.find((slot) => slot.id === currentLesson.id) ?? currentLesson
+          ? nextLessons.find((slot) => slot.id === currentLesson.id) ?? nextLessons[0] ?? null
           : nextLessons[0] ?? null
       ));
     } catch {
@@ -472,7 +533,6 @@ function TeacherCalendar() {
   const handleSlotClick = (day, startTime, slot) => {
     if (slot?.status === 'pending') {
       setSelectedLesson(slot);
-      setPendingDecisionSlot(slot);
       return;
     }
 
@@ -547,11 +607,12 @@ function TeacherCalendar() {
     }
   };
 
-  const decidePendingSlot = async (action) => {
-    if (!pendingDecisionSlot) {
+  const decidePendingSlot = async () => {
+    if (!pendingDecision) {
       return;
     }
 
+    const { slot, action } = pendingDecision;
     setStatus({ type: null, message: '' });
 
     try {
@@ -562,7 +623,7 @@ function TeacherCalendar() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          slot_id: pendingDecisionSlot.id,
+          slot_id: slot.id,
           action,
         }),
       });
@@ -572,7 +633,7 @@ function TeacherCalendar() {
         throw new Error(data.error ?? 'Nie udało się zapisać decyzji.');
       }
 
-      setPendingDecisionSlot(null);
+      setPendingDecision(null);
       const nextSlots = await fetchCalendarSlots(weekStart);
       setSlots(Object.fromEntries(
         nextSlots.map((slot) => [slotKey(slot.date, slot.start_time), slot]),
@@ -856,11 +917,11 @@ function TeacherCalendar() {
           onConfirm={reserveSlot}
         />
       )}
-      {pendingDecisionSlot && (
-        <PendingDecisionModal
-          slot={pendingDecisionSlot}
-          onCancel={() => setPendingDecisionSlot(null)}
-          onDecision={decidePendingSlot}
+      {pendingDecision && (
+        <PendingDecisionConfirmModal
+          decision={pendingDecision}
+          onCancel={() => setPendingDecision(null)}
+          onConfirm={decidePendingSlot}
         />
       )}
     </section>
@@ -868,13 +929,13 @@ function TeacherCalendar() {
       lessons={upcomingLessons}
       selectedLesson={selectedLesson}
       onSelectLesson={setSelectedLesson}
-      onReviewPending={(slot) => setPendingDecisionSlot(slot)}
+      onRequestDecision={(slot, action) => setPendingDecision({ slot, action })}
     />
     </div>
   );
 }
 
-function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onReviewPending }) {
+function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onRequestDecision }) {
   const selectedStatusMeta = selectedLesson?.status ? statusMeta[selectedLesson.status] : null;
 
   return (
@@ -949,14 +1010,26 @@ function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onReview
             <DetailLine title="Status">
               {selectedStatusMeta?.label || 'Informacja'}
             </DetailLine>
+            <DetailLine title="Zakres lekcji">
+              {selectedLesson.lesson_scope || 'Uczeń nie podał zakresu lekcji.'}
+            </DetailLine>
             {selectedLesson.status === 'pending' && (
-              <button
-                type="button"
-                onClick={() => onReviewPending(selectedLesson)}
-                className="w-full rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
-              >
-                Rozpatrz prośbę
-              </button>
+              <div className="grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => onRequestDecision(selectedLesson, 'accept')}
+                  className="w-full rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+                >
+                  Zaakceptuj rezerwację
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRequestDecision(selectedLesson, 'reject')}
+                  className="w-full rounded-lg border-2 border-red-200 px-5 py-3 text-sm font-black text-red-700 transition hover:border-red-700 hover:bg-red-50"
+                >
+                  Odrzuć rezerwację
+                </button>
+              </div>
             )}
           </div>
         ) : (
@@ -1042,13 +1115,15 @@ function ReserveSlotModal({ slot, students, onCancel, onConfirm }) {
   );
 }
 
-function PendingDecisionModal({ slot, onCancel, onDecision }) {
+function PendingDecisionConfirmModal({ decision, onCancel, onConfirm }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { slot, action } = decision;
   const studentName = slot.student?.name ?? 'Uczeń';
+  const isAccept = action === 'accept';
 
-  const handleDecision = async (action) => {
+  const handleConfirm = async () => {
     setIsSubmitting(true);
-    await onDecision(action);
+    await onConfirm();
     setIsSubmitting(false);
   };
 
@@ -1063,37 +1138,49 @@ function PendingDecisionModal({ slot, onCancel, onDecision }) {
         className="w-full max-w-md rounded-xl bg-white px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.35)]"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <h3 className="text-2xl font-black text-slate-950">Prośba o rezerwację</h3>
+        <h3 className="text-2xl font-black text-slate-950">
+          {isAccept ? 'Zaakceptować rezerwację?' : 'Odrzucić rezerwację?'}
+        </h3>
         <p className="mt-3 text-base font-semibold leading-7 text-slate-500">
-          {studentName} chce zarezerwować termin {slot.start_time}-{slot.end_time}.
+          {studentName}, {formatSlotDate(slot.date)}, {slot.start_time}-{slot.end_time}.
         </p>
+        {slot.lesson_scope && (
+          <div className="mt-4 rounded-lg border border-zinc-200 bg-[#fbfaf7] px-4 py-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+              Zakres lekcji
+            </p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+              {slot.lesson_scope}
+            </p>
+          </div>
+        )}
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             disabled={isSubmitting}
-            onClick={() => handleDecision('reject')}
-            className="rounded-md border-2 border-red-200 px-5 py-3 text-sm font-black text-red-700 transition hover:border-red-700 disabled:cursor-wait disabled:opacity-70"
+            onClick={onCancel}
+            className="rounded-md border-2 border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:border-slate-700 disabled:cursor-wait disabled:opacity-70"
           >
-            Odrzuć
+            Anuluj
           </button>
           <button
             type="button"
             disabled={isSubmitting}
-            onClick={() => handleDecision('accept')}
-            className="rounded-md bg-rose-900 px-5 py-3 text-sm font-black text-white transition hover:bg-rose-950 disabled:cursor-wait disabled:opacity-70"
+            onClick={handleConfirm}
+            className={`rounded-md px-5 py-3 text-sm font-black text-white transition disabled:cursor-wait disabled:opacity-70 ${
+              isAccept
+                ? 'bg-orange-600 hover:bg-orange-700'
+                : 'bg-red-600 hover:bg-red-700'
+            }`}
           >
-            Zaakceptuj
+            {isSubmitting
+              ? 'Zapisuję...'
+              : isAccept
+                ? 'Tak, zaakceptuj'
+                : 'Tak, odrzuć'}
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-4 w-full rounded-md px-5 py-3 text-sm font-black text-slate-500 transition hover:bg-zinc-100"
-        >
-          Anuluj
-        </button>
       </div>
     </div>
   );
@@ -1116,13 +1203,31 @@ function StudentInfoItem({ label, value }) {
   );
 }
 
+function matchesStudentTutorFilter(student, filterId) {
+  const tutor = student.onboarding_answers?.tutor;
+
+  if (filterId === 'all') {
+    return true;
+  }
+
+  if (filterId === 'none') {
+    return !tutor;
+  }
+
+  return tutor === filterId;
+}
+
 function StudentsPanel({ mode = 'students' }) {
   const [databaseStudents, setDatabaseStudents] = useState([]);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [studentTutorFilter, setStudentTutorFilter] = useState('all');
   const [messages, setMessages] = useState([]);
   const [draftMessage, setDraftMessage] = useState('');
   const [status, setStatus] = useState({ type: null, message: '' });
-  const selectedStudent = databaseStudents.find((student) => student.id === selectedStudentId) ?? null;
+  const filteredStudents = mode === 'students'
+    ? databaseStudents.filter((student) => matchesStudentTutorFilter(student, studentTutorFilter))
+    : databaseStudents;
+  const selectedStudent = filteredStudents.find((student) => student.id === selectedStudentId) ?? null;
 
   useEffect(() => {
     let isMounted = true;
@@ -1157,6 +1262,16 @@ function StudentsPanel({ mode = 'students' }) {
       window.clearInterval(intervalId);
     };
   }, []);
+
+  useEffect(() => {
+    setSelectedStudentId((currentId) => {
+      if (filteredStudents.some((student) => student.id === currentId)) {
+        return currentId;
+      }
+
+      return filteredStudents[0]?.id ?? null;
+    });
+  }, [databaseStudents, studentTutorFilter, mode]);
 
   useEffect(() => {
     if (mode !== 'chats' || !selectedStudentId) {
@@ -1227,6 +1342,33 @@ function StudentsPanel({ mode = 'students' }) {
           </p>
         )}
 
+        {mode === 'students' && databaseStudents.length > 0 && (
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            {studentTutorFilters.map((filter) => {
+              const count = databaseStudents.filter((student) => matchesStudentTutorFilter(student, filter.id)).length;
+              const isActive = studentTutorFilter === filter.id;
+
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setStudentTutorFilter(filter.id)}
+                  className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left text-sm font-black transition ${
+                    isActive
+                      ? 'border-emerald-700 bg-emerald-50 text-emerald-800 shadow-[0_10px_22px_rgba(4,120,87,0.10)]'
+                      : 'border-zinc-200 bg-[#fcfaf7] text-slate-600 hover:border-orange-200 hover:bg-orange-50'
+                  }`}
+                >
+                  <span>{filter.label}</span>
+                  <span className={`rounded-full px-2.5 py-1 text-xs ${isActive ? 'bg-white text-emerald-800' : 'bg-white text-orange-700'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="mt-6 space-y-3">
           {databaseStudents.length === 0 && (
             <p className="rounded-lg bg-[#fcfaf7] px-4 py-4 text-sm font-bold text-slate-500">
@@ -1234,27 +1376,54 @@ function StudentsPanel({ mode = 'students' }) {
             </p>
           )}
 
-          {databaseStudents.map((student) => (
-            <button
-              key={student.id}
-              type="button"
-              onClick={() => setSelectedStudentId(student.id)}
-              className={`flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left transition ${
-                student.id === selectedStudentId ? 'bg-orange-50' : 'bg-[#fcfaf7] hover:bg-orange-50/70'
-              }`}
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-lg font-black text-white">
-                {student.initial}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-base font-black text-slate-950">{student.name}</span>
-                <span className="block truncate text-sm font-semibold text-slate-500">{student.email}</span>
-                <span className="mt-1 inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-700">
-                  {student.tokens ?? 0} żetonów
+          {databaseStudents.length > 0 && filteredStudents.length === 0 && (
+            <p className="rounded-lg bg-[#fcfaf7] px-4 py-4 text-sm font-bold text-slate-500">
+              Brak uczniów dla wybranego filtra.
+            </p>
+          )}
+
+          {filteredStudents.map((student) => {
+            const hasUnread = mode === 'chats' && Boolean(student.has_unread);
+
+            return (
+              <button
+                key={student.id}
+                type="button"
+                onClick={() => setSelectedStudentId(student.id)}
+                className={`flex w-full items-center gap-4 rounded-lg border px-4 py-4 text-left transition ${
+                  hasUnread
+                    ? 'border-red-700 bg-red-50 shadow-[0_14px_30px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
+                    : student.id === selectedStudentId
+                      ? 'border-transparent bg-orange-50'
+                      : 'border-transparent bg-[#fcfaf7] hover:bg-orange-50/70'
+                }`}
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-lg font-black text-white">
+                  {student.initial}
                 </span>
-              </span>
-            </button>
-          ))}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-black text-slate-950">{student.name}</span>
+                  {hasUnread && (
+                    <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700">
+                      Nowa wiadomość
+                    </span>
+                  )}
+                  <span className="block truncate text-sm font-semibold text-slate-500">{student.email}</span>
+                  <span className="mt-2 flex flex-wrap gap-2">
+                    <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-700">
+                      {student.tokens ?? 0} żetonów
+                    </span>
+                    <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">
+                      Dodany: {student.created_at || 'Brak daty'}
+                    </span>
+                  </span>
+                </span>
+                {hasUnread && (
+                  <span className="h-3 w-3 shrink-0 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.14)]" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1316,13 +1485,19 @@ function StudentsPanel({ mode = 'students' }) {
                 <div className="min-w-0">
                   <p className="text-xl font-black text-slate-950">{selectedStudent.name}</p>
                   <p className="mt-1 truncate text-sm font-semibold text-slate-500">{selectedStudent.email}</p>
-                  <span className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-black text-orange-700">
-                    {selectedStudent.tokens ?? 0} żetonów
-                  </span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-black text-orange-700">
+                      {selectedStudent.tokens ?? 0} żetonów
+                    </span>
+                    <span className="inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-500">
+                      Dodany: {selectedStudent.created_at || 'Brak daty'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <StudentInfoItem label="Data dodania" value={selectedStudent.created_at || 'Brak daty'} />
                 <StudentInfoItem label="Zakres nauczania" value={studentSubject} />
                 <StudentInfoItem label="Sposób nauczania" value={studentFormat} />
                 <StudentInfoItem label="Wybrany korepetytor" value={studentTutor} />
@@ -1352,6 +1527,9 @@ function TokensPanel() {
   const [setAmount, setSetAmount] = useState('');
   const [status, setStatus] = useState({ type: null, message: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingTokenChange, setPendingTokenChange] = useState(null);
+  const [tokenPassword, setTokenPassword] = useState('');
+  const [areTokenControlsUnlocked, setAreTokenControlsUnlocked] = useState(false);
   const selectedStudent = databaseStudents.find((student) => student.id === selectedStudentId) ?? null;
 
   const loadStudents = () => {
@@ -1375,7 +1553,12 @@ function TokensPanel() {
     loadStudents();
   }, []);
 
-  const applyTokenChange = async (action, rawAmount) => {
+  const requestTokenChange = (action, rawAmount) => {
+    if (!areTokenControlsUnlocked) {
+      setStatus({ type: 'error', message: 'Najpierw wpisz hasło do żetonów, aby odblokować zmianę.' });
+      return;
+    }
+
     if (!selectedStudent) {
       return;
     }
@@ -1386,11 +1569,25 @@ function TokensPanel() {
       return;
     }
 
+    setStatus({ type: null, message: '' });
+    setPendingTokenChange({
+      action,
+      amount,
+      student: selectedStudent,
+    });
+  };
+
+  const applyTokenChange = async () => {
+    if (!pendingTokenChange) {
+      return;
+    }
+
+    const { action, amount, student } = pendingTokenChange;
     setIsSaving(true);
     setStatus({ type: null, message: '' });
 
     try {
-      const updatedStudent = await updateStudentTokens(selectedStudent.id, action, amount);
+      const updatedStudent = await updateStudentTokens(student.id, action, amount, tokenPassword);
       setDatabaseStudents((students) => students.map((student) => (
         student.id === updatedStudent.id
           ? { ...student, tokens: updatedStudent.tokens }
@@ -1405,9 +1602,26 @@ function TokensPanel() {
       });
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
+      if (error.message.toLowerCase().includes('hasło')) {
+        setAreTokenControlsUnlocked(false);
+        setTokenPassword('');
+      }
     } finally {
       setIsSaving(false);
+      setPendingTokenChange(null);
     }
+  };
+
+  const unlockTokenControls = (event) => {
+    event.preventDefault();
+
+    if (!tokenPassword.trim()) {
+      setStatus({ type: 'error', message: 'Wpisz hasło do żetonów.' });
+      return;
+    }
+
+    setAreTokenControlsUnlocked(true);
+    setStatus({ type: null, message: '' });
   };
 
   return (
@@ -1469,7 +1683,8 @@ function TokensPanel() {
           </p>
         )}
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-2">
+        <div className="relative mt-8">
+          <div className={`grid gap-5 lg:grid-cols-2 ${areTokenControlsUnlocked ? '' : 'pointer-events-none select-none blur-sm'}`}>
           <div className="rounded-xl border border-orange-100 bg-[#fcfaf7] px-5 py-5">
             <h3 className="text-lg font-black text-slate-950">Dodaj po płatności</h3>
             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
@@ -1489,7 +1704,7 @@ function TokensPanel() {
             <button
               type="button"
               disabled={!selectedStudent || isSaving}
-              onClick={() => applyTokenChange('add', addAmount)}
+              onClick={() => requestTokenChange('add', addAmount)}
               className="mt-5 w-full rounded-md bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Dodaj żetony
@@ -1516,15 +1731,130 @@ function TokensPanel() {
             <button
               type="button"
               disabled={!selectedStudent || isSaving || setAmount === ''}
-              onClick={() => applyTokenChange('set', setAmount)}
+              onClick={() => requestTokenChange('set', setAmount)}
               className="mt-5 w-full rounded-md border-2 border-slate-700 px-5 py-3 text-sm font-black text-slate-950 transition hover:border-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Ustaw saldo
             </button>
           </div>
+          </div>
+
+          {!areTokenControlsUnlocked && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70 px-4 backdrop-blur-[2px]">
+              <form
+                className="w-full max-w-md rounded-xl border border-orange-100 bg-white px-5 py-5 shadow-[0_18px_44px_rgba(15,23,42,0.16)]"
+                onSubmit={unlockTokenControls}
+              >
+                <h3 className="text-lg font-black text-slate-950">Odblokuj zmianę żetonów</h3>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+                  Wpisz hasło do żetonów, żeby móc zmienić liczbę żetonów ucznia.
+                </p>
+                <label className="mt-5 block">
+                  <span className="mb-2 block text-sm font-black text-slate-800">Hasło do żetonów</span>
+                  <input
+                    type="password"
+                    value={tokenPassword}
+                    onChange={(event) => setTokenPassword(event.target.value)}
+                    className="h-12 w-full rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-4 text-base font-bold text-slate-950 outline-none focus:border-orange-600 focus:bg-white"
+                    autoComplete="current-password"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="mt-5 w-full rounded-md bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+                >
+                  Odblokuj
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
+
+      {pendingTokenChange && (
+        <TokenChangeConfirmModal
+          change={pendingTokenChange}
+          isSaving={isSaving}
+          onCancel={() => {
+            if (!isSaving) {
+              setPendingTokenChange(null);
+            }
+          }}
+          onConfirm={applyTokenChange}
+        />
+      )}
     </section>
+  );
+}
+
+function TokenChangeConfirmModal({ change, isSaving, onCancel, onConfirm }) {
+  const isAdd = change.action === 'add';
+  const currentTokens = change.student.tokens ?? 0;
+  const targetTokens = isAdd ? currentTokens + change.amount : change.amount;
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="token-change-title"
+      onMouseDown={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white px-6 py-6 shadow-[0_28px_80px_rgba(15,23,42,0.35)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+            <TeacherIcon type="token" className="h-6 w-6" />
+          </span>
+          <div>
+            <h3 id="token-change-title" className="text-xl font-black text-slate-950">
+              Potwierdź zmianę żetonów
+            </h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+              {isAdd
+                ? `Dodać ${change.amount} żetonów dla ${change.student.name}?`
+                : `Ustawić saldo ${change.student.name} na ${change.amount} żetonów?`}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-lg border border-zinc-200 bg-[#fcfaf7] px-4 py-4">
+          <p className="text-sm font-black text-slate-950">{change.student.name}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-500">{change.student.email}</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm font-black">
+            <div className="rounded-lg bg-white px-3 py-3">
+              <span className="block text-slate-400">Teraz</span>
+              <span className="mt-1 block text-slate-950">{currentTokens}</span>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-3">
+              <span className="block text-slate-400">Po zmianie</span>
+              <span className="mt-1 block text-orange-700">{targetTokens}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="rounded-lg border border-zinc-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Anuluj
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSaving}
+            className="rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSaving ? 'Zapisywanie...' : 'Potwierdź'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1701,6 +2031,54 @@ function LegendDot({ className, label }) {
   );
 }
 
+function LogoutConfirmModal({ onCancel, onConfirm }) {
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="teacher-logout-title"
+      onMouseDown={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white px-6 py-6 shadow-[0_28px_80px_rgba(15,23,42,0.35)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+            <TeacherIcon type="logout" className="h-6 w-6" />
+          </span>
+          <div>
+            <h3 id="teacher-logout-title" className="text-xl font-black text-slate-950">
+              Czy na pewno chcesz się wylogować?
+            </h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+              Po potwierdzeniu wrócisz do strony głównej i trzeba będzie zalogować się ponownie.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg border border-zinc-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:border-slate-400"
+          >
+            Anuluj
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+          >
+            Tak, wyloguj się
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TeacherIcon({ type, className }) {
   if (type === 'calendar') {
     return (
@@ -1738,6 +2116,14 @@ function TeacherIcon({ type, className }) {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
         <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M10 17l5-5-5-5m5 5H3m7 9h8a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3h-8" />
+      </svg>
+    );
+  }
+
+  if (type === 'bell') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+        <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-4 12a2 2 0 0 1-4 0" />
       </svg>
     );
   }

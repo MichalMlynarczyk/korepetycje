@@ -33,3 +33,19 @@ body {
 .pending-reservation-pulse {
   animation: pending-reservation-pulse 1s ease-in-out infinite;
 }
+
+@keyframes lesson-scope-required-pulse {
+  0%, 100% {
+    border-color: #991b1b;
+    box-shadow: 0 0 0 0 rgba(153, 27, 27, 0.28);
+  }
+
+  50% {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.14);
+  }
+}
+
+.lesson-scope-required {
+  animation: lesson-scope-required-pulse 1s ease-in-out infinite;
+}

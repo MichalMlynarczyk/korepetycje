@@ -7,18 +7,20 @@ from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import BadHeaderError, send_mail
 from django.db import models, transaction
 from django.http import FileResponse, HttpResponseRedirect, JsonResponse
 from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from .models import ChatMessage, LessonSlot, StudentMaterial, StudentProfile
+from .models import ChatMessage, ChatReadState, LessonSlot, StudentMaterial, StudentNotification, StudentProfile
 
 
 DEFAULT_SLOT_KEYS = {
@@ -141,6 +143,99 @@ def _send_verification_email(user):
     )
 
 
+def _send_account_deletion_backup_email(user, profile, deleted_at):
+    local_deleted_at = timezone.localtime(deleted_at)
+    local_joined_at = timezone.localtime(user.date_joined)
+    onboarding_answers = profile.onboarding_answers if profile else {}
+    subject = 'Usunięte konto ucznia NaSTOmatMa'
+    message = (
+        'Uczeń usunął konto z panelu NaSTOmatMa.\n'
+        'Poniżej dane pomocnicze do szybkiego przywrócenia konta, jeśli usunięcie było pomyłką.\n\n'
+        f'ID użytkownika: {user.id}\n'
+        f'Imię i nazwisko: {_display_name(user)}\n'
+        f'E-mail: {user.email or "Brak"}\n'
+        f'Login: {user.username}\n'
+        f'Liczba żetonów: {profile.tokens if profile else 0}\n'
+        f'Data dodania konta: {local_joined_at:%d.%m.%Y %H:%M}\n'
+        f'Data usunięcia konta: {local_deleted_at:%d.%m.%Y %H:%M}\n\n'
+        'Odpowiedzi z ankiety:\n'
+        f'{json.dumps(onboarding_answers, ensure_ascii=False, indent=2)}\n'
+    )
+
+    send_mail(
+        subject,
+        message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[settings.DELETED_ACCOUNT_EMAIL],
+        fail_silently=False,
+    )
+
+
+def _send_new_student_notification_email(user, profile):
+    created_at = profile.created_at if profile else user.date_joined
+    local_created_at = timezone.localtime(created_at)
+    onboarding_answers = profile.onboarding_answers if profile else {}
+    message = (
+        'Nowy uczeń zarejestrował się w NaSTOmatMa.\n\n'
+        f'ID użytkownika: {user.id}\n'
+        f'Imię i nazwisko: {_display_name(user)}\n'
+        f'E-mail: {user.email or "Brak"}\n'
+        f'Login: {user.username}\n'
+        f'Liczba żetonów: {profile.tokens if profile else 0}\n'
+        f'Data dodania konta: {local_created_at:%d.%m.%Y %H:%M}\n\n'
+        'Odpowiedzi z ankiety:\n'
+        f'{json.dumps(onboarding_answers, ensure_ascii=False, indent=2)}\n'
+    )
+
+    send_mail(
+        subject='Nowy uczeń',
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[settings.NEW_STUDENT_EMAIL],
+        fail_silently=False,
+    )
+
+
+def _token_password_error(user, password):
+    lock_key = f'teacher-token-password-lock:{user.id}'
+    attempts_key = f'teacher-token-password-attempts:{user.id}'
+    locked_until = cache.get(lock_key)
+    now = timezone.now()
+
+    if locked_until and locked_until > now:
+        seconds_left = max(1, int((locked_until - now).total_seconds()))
+        minutes_left = max(1, (seconds_left + 59) // 60)
+        return JsonResponse({
+            'error': f'Zbyt wiele błędnych prób. Spróbuj ponownie za {minutes_left} min.',
+            'locked_seconds': seconds_left,
+        }, status=429)
+
+    if constant_time_compare(password, settings.TEACHER_TOKEN_PASSWORD):
+        cache.delete(attempts_key)
+        cache.delete(lock_key)
+        return None
+
+    attempts = int(cache.get(attempts_key, 0)) + 1
+    limit = settings.TEACHER_TOKEN_PASSWORD_ATTEMPT_LIMIT
+    lock_seconds = settings.TEACHER_TOKEN_PASSWORD_LOCK_SECONDS
+
+    if attempts >= limit:
+        locked_until = now + timedelta(seconds=lock_seconds)
+        cache.set(lock_key, locked_until, timeout=lock_seconds)
+        cache.delete(attempts_key)
+        return JsonResponse({
+            'error': 'Zbyt wiele błędnych prób. Spróbuj ponownie za 5 min.',
+            'locked_seconds': lock_seconds,
+        }, status=429)
+
+    cache.set(attempts_key, attempts, timeout=lock_seconds)
+    attempts_left = max(0, limit - attempts)
+    return JsonResponse({
+        'error': f'Nieprawidłowe hasło do żetonów. Pozostało prób: {attempts_left}.',
+        'attempts_left': attempts_left,
+    }, status=403)
+
+
 def _teacher_user():
     return _teacher_users().first()
 
@@ -153,6 +248,28 @@ def _chat_queryset(student, teacher, include_system=True):
         messages = messages.filter(is_system=False)
 
     return messages
+
+
+def _mark_chat_read(student, teacher, user):
+    ChatReadState.objects.update_or_create(
+        student=student,
+        teacher=teacher,
+        user=user,
+        defaults={'last_read_at': timezone.now()},
+    )
+
+
+def _has_unread_chat(student, teacher, user):
+    read_state = ChatReadState.objects.filter(
+        student=student,
+        teacher=teacher,
+        user=user,
+    ).first()
+    messages = _chat_queryset(student, teacher, include_system=False).filter(recipient=user)
+    if read_state:
+        messages = messages.filter(created_at__gt=read_state.last_read_at)
+
+    return messages.exists()
 
 
 def _chat_message_payload(message, viewer):
@@ -222,6 +339,24 @@ def _booked_cancellation_info(slot):
     }
 
 
+def _lesson_scope_for_slot(slot):
+    if not slot.student_id:
+        return ''
+
+    prefix = (
+        f'Zakres korepetycji ({slot.date.strftime("%d.%m.%Y")}, '
+        f'{slot.start_time.strftime("%H:%M")} - {slot.end_time.strftime("%H:%M")}): '
+    )
+    body = ChatMessage.objects.filter(
+        student=slot.student,
+        sender=slot.student,
+        recipient=slot.teacher,
+        body__startswith=prefix,
+    ).order_by('-created_at').values_list('body', flat=True).first()
+
+    return body[len(prefix):].strip() if body else ''
+
+
 def _slot_payload(slot):
     student_name = None
     if slot.student_id:
@@ -240,6 +375,7 @@ def _slot_payload(slot):
         'end_time': slot.end_time.strftime('%H:%M'),
         'status': slot.status,
         'confirmed_at': timezone.localtime(slot.confirmed_at).isoformat() if slot.confirmed_at else None,
+        'lesson_scope': _lesson_scope_for_slot(slot),
         **cancellation_info,
         'teacher': {
             'id': slot.teacher_id,
@@ -253,6 +389,66 @@ def _slot_payload(slot):
             'id': slot.rejected_student_id,
             'name': rejected_student_name,
         } if slot.rejected_student_id else None,
+    }
+
+
+def _lesson_notification_message(slot):
+    return f'{slot.date:%d.%m.%Y}, godz. {slot.start_time:%H:%M} - {slot.end_time:%H:%M}'
+
+
+def _create_lesson_notification(student, slot, kind):
+    if not student:
+        return None
+
+    is_rejected = kind == StudentNotification.KIND_LESSON_REJECTED
+    title = 'Korepetycje nie odbędą się' if is_rejected else 'Korepetycje odbędą się'
+
+    notification, _ = StudentNotification.objects.get_or_create(
+        student=student,
+        lesson_slot=slot,
+        kind=kind,
+        defaults={
+            'title': title,
+            'message': _lesson_notification_message(slot),
+            'teacher_name': _display_name(slot.teacher),
+            'lesson_date': slot.date,
+            'start_time': slot.start_time,
+            'end_time': slot.end_time,
+        },
+    )
+    return notification
+
+
+def _create_tokens_notification(student, amount, tokens):
+    if not student or amount <= 0:
+        return None
+
+    return StudentNotification.objects.create(
+        student=student,
+        kind=StudentNotification.KIND_TOKENS_ADDED,
+        title='Żetony zostały dodane',
+        message=f'Dodano {amount} żetonów. Aktualne saldo: {tokens}.',
+    )
+
+
+def _student_notification_payload(notification):
+    type_map = {
+        StudentNotification.KIND_LESSON_ACCEPTED: 'booked',
+        StudentNotification.KIND_LESSON_REJECTED: 'rejected',
+        StudentNotification.KIND_TOKENS_ADDED: 'tokens',
+    }
+
+    return {
+        'id': notification.id,
+        'type': type_map.get(notification.kind, notification.kind),
+        'kind': notification.kind,
+        'title': notification.title,
+        'message': notification.message,
+        'teacher_name': notification.teacher_name,
+        'lesson_date': notification.lesson_date.isoformat() if notification.lesson_date else None,
+        'start_time': notification.start_time.strftime('%H:%M') if notification.start_time else None,
+        'end_time': notification.end_time.strftime('%H:%M') if notification.end_time else None,
+        'created_at': timezone.localtime(notification.created_at).isoformat(),
     }
 
 
@@ -416,7 +612,10 @@ def students_list(request):
                 'initial': _initial(student),
                 'email': student.email,
                 'tokens': student.student_profile.tokens,
+                'created_at': timezone.localtime(student.student_profile.created_at).strftime('%d.%m.%Y %H:%M'),
+                'created_at_iso': timezone.localtime(student.student_profile.created_at).isoformat(),
                 'onboarding_answers': student.student_profile.onboarding_answers,
+                'has_unread': _has_unread_chat(student, request.user, request.user),
                 'last_message': (
                     ChatMessage.objects.filter(student=student)
                     .filter(models.Q(recipient=request.user) | models.Q(sender=request.user))
@@ -588,6 +787,11 @@ def student_tokens(request, student_id):
     if data is None:
         return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
 
+    password = str(data.get('password', ''))
+    password_error = _token_password_error(request.user, password)
+    if password_error:
+        return password_error
+
     action = data.get('action')
     try:
         amount = int(data.get('amount'))
@@ -598,6 +802,7 @@ def student_tokens(request, student_id):
         return JsonResponse({'error': 'Liczba żetonów nie może być ujemna.'}, status=400)
 
     profile = student.student_profile
+    previous_tokens = profile.tokens
     if action == 'add':
         profile.tokens += amount
     elif action == 'set':
@@ -606,6 +811,9 @@ def student_tokens(request, student_id):
         return JsonResponse({'error': 'Nieprawidłowa akcja.'}, status=400)
 
     profile.save(update_fields=['tokens', 'updated_at'])
+
+    if action == 'add' and profile.tokens > previous_tokens:
+        _create_tokens_notification(student, profile.tokens - previous_tokens, profile.tokens)
 
     return JsonResponse({
         'student': {
@@ -634,6 +842,7 @@ def teachers_list(request):
                 'name': _display_name(teacher),
                 'initial': _initial(teacher),
                 'email': teacher.email,
+                'has_unread': _has_unread_chat(request.user, teacher, request.user),
                 'last_message': (
                     _chat_queryset(request.user, teacher, include_system=False)
                     .order_by('-created_at')
@@ -643,6 +852,24 @@ def teachers_list(request):
                 ),
             }
             for teacher in teachers
+        ],
+    })
+
+
+@require_GET
+def student_notifications(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if _is_teacher(request.user):
+        return JsonResponse({'error': 'Ten widok jest przeznaczony dla ucznia.'}, status=403)
+
+    notifications = StudentNotification.objects.filter(student=request.user).order_by('-created_at')[:100]
+
+    return JsonResponse({
+        'notifications': [
+            _student_notification_payload(notification)
+            for notification in notifications
         ],
     })
 
@@ -681,6 +908,7 @@ def student_chat_messages(request):
         )
 
     messages = _chat_queryset(request.user, teacher, include_system=False).select_related('sender', 'recipient')
+    _mark_chat_read(request.user, teacher, request.user)
 
     return JsonResponse({
         'teacher': {
@@ -728,6 +956,7 @@ def chat_messages(request, student_id):
         )
 
     messages = _chat_queryset(student, request.user).select_related('sender', 'recipient')
+    _mark_chat_read(student, request.user, request.user)
 
     return JsonResponse({
         'student': {
@@ -828,6 +1057,8 @@ def calendar_teacher_reserve_slot(request):
     slot.rejected_student = None
     slot.confirmed_at = timezone.now() if student else None
     slot.save(update_fields=['end_time', 'status', 'student', 'rejected_student', 'confirmed_at', 'updated_at'])
+    if student:
+        _create_lesson_notification(student, slot, StudentNotification.KIND_LESSON_ACCEPTED)
 
     return JsonResponse({'slot': _slot_payload(slot)})
 
@@ -863,6 +1094,7 @@ def calendar_decide_slot(request):
             slot.rejected_student = None
             slot.confirmed_at = timezone.now()
             slot.save(update_fields=['status', 'rejected_student', 'confirmed_at', 'updated_at'])
+            _create_lesson_notification(slot.student, slot, StudentNotification.KIND_LESSON_ACCEPTED)
         else:
             rejected_student = slot.student
             if rejected_student_id := slot.student_id:
@@ -875,6 +1107,7 @@ def calendar_decide_slot(request):
             slot.status = LessonSlot.STATUS_AVAILABLE
             slot.confirmed_at = None
             slot.save(update_fields=['status', 'student', 'rejected_student', 'confirmed_at', 'updated_at'])
+            _create_lesson_notification(rejected_student, slot, StudentNotification.KIND_LESSON_REJECTED)
 
     return JsonResponse({'slot': _slot_payload(slot)})
 
@@ -1127,11 +1360,12 @@ def register(request):
         first_name=full_name[:150],
         is_active=False,
     )
-    StudentProfile.objects.create(user=user, full_name=full_name)
+    profile = StudentProfile.objects.create(user=user, full_name=full_name)
     try:
         _send_verification_email(user)
+        _send_new_student_notification_email(user, profile)
     except (BadHeaderError, OSError, SMTPException):
-        return JsonResponse({'error': 'Konto zostało utworzone, ale nie udało się wysłać maila weryfikacyjnego. Spróbuj zarejestrować się ponownie za chwilę.'}, status=502)
+        return JsonResponse({'error': 'Konto zostało utworzone, ale nie udało się wysłać wymaganych wiadomości e-mail. Spróbuj zarejestrować się ponownie za chwilę.'}, status=502)
 
     return JsonResponse({
         'detail': 'Konto zostało utworzone. Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.',
@@ -1199,6 +1433,16 @@ def account_delete(request):
     user = request.user
     if _is_teacher(user):
         return JsonResponse({'error': 'Konto korepetytora nie może być usunięte z panelu ucznia.'}, status=403)
+
+    profile = getattr(user, 'student_profile', None)
+    deleted_at = timezone.now()
+
+    try:
+        _send_account_deletion_backup_email(user, profile, deleted_at)
+    except BadHeaderError:
+        return JsonResponse({'error': 'Nieprawidłowy nagłówek wiadomości.'}, status=400)
+    except (OSError, SMTPException, Exception):
+        return JsonResponse({'error': 'Nie udało się wysłać kopii danych konta do supportu. Konto nie zostało usunięte.'}, status=502)
 
     with transaction.atomic():
         LessonSlot.objects.filter(student=user).update(
