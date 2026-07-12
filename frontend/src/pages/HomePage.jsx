@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../api.js';
 import individualLearningImage from '../assets/individual-learning.png';
 import heroStudentImage from '../../images/ChatGPT Image 2 lip 2026, 22_32_26.png';
@@ -373,14 +373,14 @@ export function HomePage() {
                 </a>
               </div>
 
-              <div className="mt-9 grid gap-4 text-sm text-slate-700 sm:grid-cols-3 lg:max-w-2xl">
+              <div className="mt-9 hidden gap-4 text-sm text-slate-700 sm:grid sm:grid-cols-3 lg:max-w-2xl">
                 {heroBenefits.map((benefit) => (
                   <HeroBenefit key={benefit.title} benefit={benefit} />
                 ))}
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-[650px]">
+            <div className="relative mx-auto hidden w-full max-w-[650px] sm:block">
               <div className="absolute -left-8 top-28 hidden grid-cols-4 gap-4 lg:grid">
                 {Array.from({ length: 20 }).map((_, index) => (
                   <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
@@ -530,8 +530,82 @@ function StatIcon({ type, className }) {
 }
 
 function HowToStart() {
+  const sectionRef = useRef(null);
+  const mobileSliderRef = useRef(null);
+  const [activeProcessStep, setActiveProcessStep] = useState(0);
+  const [isProcessSectionVisible, setIsProcessSectionVisible] = useState(false);
+
+  const scrollToProcessStep = (index) => {
+    const slider = mobileSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    slider.scrollTo({
+      left: slider.clientWidth * index,
+      behavior: 'smooth',
+    });
+  };
+
+  useEffect(() => {
+    const section = sectionRef.current;
+
+    if (!section) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsProcessSectionVisible(entry.isIntersecting);
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(section);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isProcessSectionVisible) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+
+    if (!mediaQuery.matches) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActiveProcessStep((currentStep) => {
+        const nextStep = (currentStep + 1) % steps.length;
+        scrollToProcessStep(nextStep);
+        return nextStep;
+      });
+    }, 2000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isProcessSectionVisible]);
+
+  const handleProcessSliderScroll = () => {
+    const slider = mobileSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    const nextStep = Math.round(slider.scrollLeft / slider.clientWidth);
+    setActiveProcessStep(Math.min(Math.max(nextStep, 0), steps.length - 1));
+  };
+
   return (
-    <section id="jak-to-dziala" className="relative overflow-hidden bg-[#fbfaf7] px-4 pb-12 pt-12 sm:px-6 sm:pb-16 sm:pt-16 lg:px-10">
+    <section ref={sectionRef} id="jak-to-dziala" className="relative overflow-hidden bg-[#fbfaf7] px-4 pb-12 pt-12 sm:px-6 sm:pb-16 sm:pt-16 lg:px-10">
       <div className="absolute left-[8%] top-16 hidden grid-cols-4 gap-5 opacity-80 lg:grid">
         {Array.from({ length: 20 }).map((_, index) => (
           <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
@@ -559,7 +633,40 @@ function HowToStart() {
           </p>
         </div>
 
-        <div className="relative mt-10 grid gap-8 sm:mt-14 lg:grid-cols-4">
+        <div
+          ref={mobileSliderRef}
+          onScroll={handleProcessSliderScroll}
+          className="-mx-4 mt-10 flex snap-x snap-mandatory overflow-x-auto scroll-smooth px-4 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+          aria-label="Kroki procesu"
+        >
+          {steps.map((step) => (
+            <div key={step.number} className="w-full shrink-0 snap-center px-4">
+              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-8 shadow-[0_14px_28px_rgba(15,23,42,0.08)]">
+                <ProcessStep step={step} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex justify-center gap-2 sm:hidden" aria-label="Aktualny krok procesu">
+          {steps.map((step, index) => (
+            <button
+              key={step.number}
+              type="button"
+              onClick={() => {
+                setActiveProcessStep(index);
+                scrollToProcessStep(index);
+              }}
+              className={`h-2.5 rounded-full transition-all ${
+                activeProcessStep === index ? 'w-7 bg-[#006b5f]' : 'w-2.5 bg-[#cde4d8]'
+              }`}
+              aria-label={`Przejdź do kroku ${index + 1} z ${steps.length}`}
+              aria-current={activeProcessStep === index ? 'step' : undefined}
+            />
+          ))}
+        </div>
+
+        <div className="relative mt-10 hidden gap-8 sm:mt-14 sm:grid lg:grid-cols-4">
           <div className="absolute left-[12%] right-[12%] top-5 hidden border-t-2 border-dashed border-[#c6d7ce] lg:block" />
           {steps.map((step) => (
             <ProcessStep key={step.number} step={step} />
@@ -594,27 +701,27 @@ function ProcessStep({ step }) {
 
 function ProcessStatsPanel() {
   return (
-    <div className="mt-12 rounded-2xl bg-[linear-gradient(135deg,#164f36,#0b5f4f)] px-6 py-8 text-white shadow-[0_20px_45px_rgba(9,64,47,0.18)] sm:mt-16 sm:px-10 lg:grid lg:grid-cols-[1.2fr_2.2fr] lg:items-center lg:px-14 lg:py-12">
+    <div className="mt-8 rounded-2xl bg-[linear-gradient(135deg,#164f36,#0b5f4f)] px-5 py-6 text-white shadow-[0_20px_45px_rgba(9,64,47,0.18)] sm:mt-16 sm:px-10 sm:py-8 lg:grid lg:grid-cols-[1.2fr_2.2fr] lg:items-center lg:px-14 lg:py-12">
       <div>
-        <p className="text-xs font-black uppercase tracking-[0.32em] text-white/60">
+        <p className="text-[0.65rem] font-black uppercase tracking-[0.26em] text-white/60 sm:text-xs sm:tracking-[0.32em]">
           Dlaczego warto z nami?
         </p>
-        <h3 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">
+        <h3 className="mt-3 text-2xl font-black leading-tight text-white sm:text-4xl">
           Sprawdzone rezultaty
         </h3>
-        <p className="mt-5 max-w-md text-base font-medium leading-8 text-white/72">
+        <p className="mt-3 max-w-md text-sm font-medium leading-6 text-white/72 sm:mt-5 sm:text-base sm:leading-8">
           Od lat pomagamy uczniom zrozumieć matematykę i osiągać świetne wyniki na egzaminach.
         </p>
       </div>
 
-      <div className="mt-8 grid gap-0 divide-y divide-white/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:mt-0 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-0 sm:divide-x sm:divide-y-0 sm:divide-white/15 lg:mt-0 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.value} className="px-4 py-5 text-center">
-            <span className="mx-auto flex h-9 w-9 items-center justify-center text-white/58">
-              <StatIcon type={stat.icon} className="h-7 w-7" />
+          <div key={stat.value} className="rounded-lg bg-white/8 px-3 py-4 text-center sm:rounded-none sm:bg-transparent sm:px-4 sm:py-5">
+            <span className="mx-auto flex h-8 w-8 items-center justify-center text-white/58 sm:h-9 sm:w-9">
+              <StatIcon type={stat.icon} className="h-6 w-6 sm:h-7 sm:w-7" />
             </span>
-            <p className="mt-3 text-4xl font-black leading-none text-white">{stat.value}</p>
-            <p className="mx-auto mt-3 max-w-[9rem] whitespace-pre-line text-sm font-medium leading-5 text-white/70">
+            <p className="mt-2 text-3xl font-black leading-none text-white sm:mt-3 sm:text-4xl">{stat.value}</p>
+            <p className="mx-auto mt-2 max-w-[8rem] whitespace-pre-line text-xs font-medium leading-4 text-white/70 sm:mt-3 sm:max-w-[9rem] sm:text-sm sm:leading-5">
               {stat.label}
             </p>
           </div>
@@ -1497,6 +1604,10 @@ function ChatBubblesIcon({ className }) {
 }
 
 function PriceList() {
+  const sectionRef = useRef(null);
+  const mobileSliderRef = useRef(null);
+  const [activePricingPlan, setActivePricingPlan] = useState(0);
+  const [isPricingSectionVisible, setIsPricingSectionVisible] = useState(false);
   const pricingGroups = [
     {
       id: 'primary',
@@ -1625,8 +1736,84 @@ function PriceList() {
   const [selectedPricingGroupId, setSelectedPricingGroupId] = useState(pricingGroups[0].id);
   const selectedPricingGroup = pricingGroups.find((group) => group.id === selectedPricingGroupId) ?? pricingGroups[0];
 
+  const scrollToPricingPlan = (index) => {
+    const slider = mobileSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    slider.scrollTo({
+      left: slider.clientWidth * index,
+      behavior: 'smooth',
+    });
+  };
+
+  useEffect(() => {
+    const section = sectionRef.current;
+
+    if (!section) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsPricingSectionVisible(entry.isIntersecting);
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(section);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    setActivePricingPlan(0);
+    window.setTimeout(() => {
+      scrollToPricingPlan(0);
+    }, 0);
+  }, [selectedPricingGroupId]);
+
+  useEffect(() => {
+    if (!isPricingSectionVisible) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+
+    if (!mediaQuery.matches) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActivePricingPlan((currentPlan) => {
+        const nextPlan = (currentPlan + 1) % selectedPricingGroup.plans.length;
+        scrollToPricingPlan(nextPlan);
+        return nextPlan;
+      });
+    }, 2000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isPricingSectionVisible, selectedPricingGroup.plans.length]);
+
+  const handlePricingSliderScroll = () => {
+    const slider = mobileSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    const nextPlan = Math.round(slider.scrollLeft / slider.clientWidth);
+    setActivePricingPlan(Math.min(Math.max(nextPlan, 0), selectedPricingGroup.plans.length - 1));
+  };
+
   return (
-    <section id="cennik" className="relative overflow-hidden bg-[#fbfaf7] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
+    <section ref={sectionRef} id="cennik" className="relative overflow-hidden bg-[#fbfaf7] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
       <div className="absolute left-[9%] top-16 hidden grid-cols-4 gap-5 opacity-80 lg:grid">
         {Array.from({ length: 20 }).map((_, index) => (
           <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
@@ -1675,7 +1862,38 @@ function PriceList() {
           {selectedPricingGroup.note}
         </p>
 
-        <div className="mt-9 grid gap-6 lg:grid-cols-3">
+        <div
+          ref={mobileSliderRef}
+          onScroll={handlePricingSliderScroll}
+          className="-mx-4 mt-9 flex snap-x snap-mandatory overflow-x-auto scroll-smooth px-4 pb-1 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+          aria-label={`Pakiety: ${selectedPricingGroup.label}`}
+        >
+          {selectedPricingGroup.plans.map((item) => (
+            <div key={item.name} className="w-full shrink-0 snap-center px-4 pt-5">
+              <PricingCard item={item} />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex justify-center gap-2 sm:hidden" aria-label="Aktualny pakiet">
+          {selectedPricingGroup.plans.map((item, index) => (
+            <button
+              key={item.name}
+              type="button"
+              onClick={() => {
+                setActivePricingPlan(index);
+                scrollToPricingPlan(index);
+              }}
+              className={`h-2.5 rounded-full transition-all ${
+                activePricingPlan === index ? 'w-7 bg-[#006b5f]' : 'w-2.5 bg-[#cde4d8]'
+              }`}
+              aria-label={`Przejdź do pakietu ${index + 1} z ${selectedPricingGroup.plans.length}`}
+              aria-current={activePricingPlan === index ? 'step' : undefined}
+            />
+          ))}
+        </div>
+
+        <div className="mt-9 hidden gap-6 sm:grid lg:grid-cols-3">
           {selectedPricingGroup.plans.map((item) => (
             <PricingCard key={item.name} item={item} />
           ))}
@@ -1996,7 +2214,15 @@ function Benefit({ icon, text }) {
 
 function Corepetitors(){
   const [areTutorCardsExpanded, setAreTutorCardsExpanded] = useState(false);
+  const [expandedMobileTutors, setExpandedMobileTutors] = useState({});
   const [isTutorExpansionForced, setIsTutorExpansionForced] = useState(false);
+
+  const toggleMobileTutor = (tutorName) => {
+    setExpandedMobileTutors((current) => ({
+      ...current,
+      [tutorName]: !current[tutorName],
+    }));
+  };
 
   useEffect(() => {
     const expandTutors = () => {
@@ -2050,6 +2276,8 @@ function Corepetitors(){
                 key={tutor.name}
                 tutor={tutor}
                 isExpanded={areTutorCardsExpanded}
+                isMobileExpanded={Boolean(expandedMobileTutors[tutor.name])}
+                onToggleMobile={() => toggleMobileTutor(tutor.name)}
               />
             ))}
           </div>
@@ -2060,7 +2288,7 @@ function Corepetitors(){
   );
 }
 
-function TutorProfileCard({ tutor, isExpanded }) {
+function TutorProfileCard({ tutor, isExpanded, isMobileExpanded, onToggleMobile }) {
   const details = [
     {
       icon: <GraduationCapIcon className="h-5 w-5" />,
@@ -2078,6 +2306,7 @@ function TutorProfileCard({ tutor, isExpanded }) {
       value: tutor.style,
     },
   ];
+  const mobileDetailsId = `tutor-details-${tutor.name.toLowerCase()}`;
 
   return (
     <article className="rounded-2xl border border-zinc-200 bg-white px-6 py-7 shadow-[0_14px_28px_rgba(15,23,42,0.08)] transition-all duration-500 sm:px-8 sm:py-9 lg:px-10">
@@ -2096,13 +2325,41 @@ function TutorProfileCard({ tutor, isExpanded }) {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={onToggleMobile}
+        className="mt-6 flex w-full items-center justify-between rounded-lg border border-[#cde4d8] bg-[#f3faf7] px-4 py-3 text-left text-sm font-black text-[#07463f] transition hover:bg-[#e8f4ef] sm:hidden"
+        aria-expanded={isMobileExpanded}
+        aria-controls={mobileDetailsId}
+      >
+        <span>{isMobileExpanded ? 'Zwiń informacje o korepetytorze' : 'Rozwiń informacje o korepetytorze'}</span>
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className={`h-5 w-5 shrink-0 transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`}
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+          />
+        </svg>
+      </button>
+
       <div
+        id={mobileDetailsId}
         className={`overflow-hidden transition-all duration-700 ease-out ${
-          isExpanded
-            ? 'mt-9 max-h-[820px] opacity-100'
+          isMobileExpanded
+            ? 'mt-7 max-h-[920px] opacity-100'
             : 'mt-0 max-h-0 opacity-0'
+        } ${
+          isExpanded
+            ? 'sm:mt-9 sm:max-h-[820px] sm:opacity-100'
+            : 'sm:mt-0 sm:max-h-0 sm:opacity-0'
         }`}
-        aria-hidden={!isExpanded}
       >
         <div className="grid gap-5 text-center sm:grid-cols-3 sm:gap-6">
           {details.map((detail) => (
@@ -2173,6 +2430,10 @@ function TutorDetail({ icon, label, value }) {
 }
 
 function ProgramSection() {
+  const sectionRef = useRef(null);
+  const mobileSliderRef = useRef(null);
+  const [activeEducationLevel, setActiveEducationLevel] = useState(0);
+  const [isProgramSectionVisible, setIsProgramSectionVisible] = useState(false);
   const offerLevels = [
     {
       title: 'Klasy 1-3',
@@ -2220,8 +2481,77 @@ function ProgramSection() {
     },
   ];
 
+  const scrollToEducationLevel = (index) => {
+    const slider = mobileSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    slider.scrollTo({
+      left: slider.clientWidth * index,
+      behavior: 'smooth',
+    });
+  };
+
+  useEffect(() => {
+    const section = sectionRef.current;
+
+    if (!section) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsProgramSectionVisible(entry.isIntersecting);
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(section);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isProgramSectionVisible) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+
+    if (!mediaQuery.matches) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActiveEducationLevel((currentLevel) => {
+        const nextLevel = (currentLevel + 1) % offerLevels.length;
+        scrollToEducationLevel(nextLevel);
+        return nextLevel;
+      });
+    }, 2000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isProgramSectionVisible, offerLevels.length]);
+
+  const handleEducationSliderScroll = () => {
+    const slider = mobileSliderRef.current;
+
+    if (!slider) {
+      return;
+    }
+
+    const nextLevel = Math.round(slider.scrollLeft / slider.clientWidth);
+    setActiveEducationLevel(Math.min(Math.max(nextLevel, 0), offerLevels.length - 1));
+  };
+
   return (
-    <section id="program" className="relative overflow-hidden bg-[#fffdf9] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
+    <section ref={sectionRef} id="program" className="relative overflow-hidden bg-[#fffdf9] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
       <div className="absolute left-[9%] top-16 hidden grid-cols-4 gap-5 opacity-80 lg:grid">
         {Array.from({ length: 20 }).map((_, index) => (
           <span key={index} className="h-2 w-2 rounded-full bg-[#b7d5c8]" />
@@ -2244,7 +2574,38 @@ function ProgramSection() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:mt-14 md:grid-cols-2 xl:grid-cols-4">
+        <div
+          ref={mobileSliderRef}
+          onScroll={handleEducationSliderScroll}
+          className="-mx-4 mt-10 flex snap-x snap-mandatory overflow-x-auto scroll-smooth px-4 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+          aria-label="Poziomy nauczania"
+        >
+          {offerLevels.map((level) => (
+            <div key={level.title} className="w-full shrink-0 snap-center px-4">
+              <EducationCard level={level} />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex justify-center gap-2 sm:hidden" aria-label="Aktualny poziom nauczania">
+          {offerLevels.map((level, index) => (
+            <button
+              key={level.title}
+              type="button"
+              onClick={() => {
+                setActiveEducationLevel(index);
+                scrollToEducationLevel(index);
+              }}
+              className={`h-2.5 rounded-full transition-all ${
+                activeEducationLevel === index ? 'w-7 bg-[#006b5f]' : 'w-2.5 bg-[#cde4d8]'
+              }`}
+              aria-label={`Przejdź do poziomu ${index + 1} z ${offerLevels.length}`}
+              aria-current={activeEducationLevel === index ? 'step' : undefined}
+            />
+          ))}
+        </div>
+
+        <div className="mt-10 hidden gap-6 sm:mt-14 sm:grid md:grid-cols-2 xl:grid-cols-4">
           {offerLevels.map((level) => (
             <EducationCard key={level.title} level={level} />
           ))}
@@ -2350,7 +2711,7 @@ function Contact(){
               wolnych terminów czy planu nauczania.
             </p>
 
-            <div className="mt-20 grid gap-6 text-center sm:grid-cols-3 lg:max-w-2xl">
+            <div className="mt-20 hidden gap-6 text-center sm:grid sm:grid-cols-3 lg:max-w-2xl">
               <ContactBenefit
                 icon={<ClockIcon className="h-6 w-6" />}
                 title="Szybka odpowiedź"

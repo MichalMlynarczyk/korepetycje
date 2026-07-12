@@ -43,9 +43,17 @@ docker compose up --build
 
 Serwisy:
 
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:8000`
-- PostgreSQL: `localhost:5432`
+- Publiczny adres przez Caddy: `http://45.93.139.211`
+- Frontend lokalnie: `http://localhost:5173`
+- Backend lokalnie: `http://localhost:8001`
+- PostgreSQL lokalnie: `localhost:55432`
+
+Mapowanie portow Docker Compose:
+
+- Caddy: `0.0.0.0:80->80`, `0.0.0.0:443->443`
+- Backend: `127.0.0.1:8001->8000`
+- Frontend: `127.0.0.1:5173->5173`
+- PostgreSQL: `127.0.0.1:55432->5432`
 
 Backend przy starcie wykonuje migracje i tworzy konto nauczyciela:
 

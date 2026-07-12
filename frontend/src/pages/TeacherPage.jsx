@@ -261,7 +261,14 @@ export function TeacherPage({ user, onLogout }) {
       />
 
       <main className="min-w-0 lg:col-start-2">
-        <TeacherHeader displayName={displayName} initial={initial} />
+        <TeacherHeader
+          displayName={displayName}
+          initial={initial}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          onLogout={onLogout}
+          hasUnreadChat={hasUnreadChat}
+        />
 
         <div className="px-4 py-8 sm:px-6 lg:px-10">
           <div>
@@ -286,7 +293,15 @@ export function TeacherPage({ user, onLogout }) {
   );
 }
 
-function TeacherHeader({ displayName, initial }) {
+function TeacherHeader({ displayName, initial, activeTab, onChange, onLogout, hasUnreadChat }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  const handleMobileTabChange = (tabId) => {
+    onChange(tabId);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
       <div className="flex min-h-20 items-center justify-end gap-4 px-4 py-4 sm:px-6 lg:px-10">
@@ -297,12 +312,86 @@ function TeacherHeader({ displayName, initial }) {
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
             {initial}
           </span>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-[#07463f] transition hover:border-[#007566] hover:bg-[#f3faf7] lg:hidden"
+            aria-label={isMobileMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className="sr-only">{isMobileMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}</span>
+            <span className="grid gap-1.5">
+              <span className={`block h-0.5 w-5 rounded-full bg-current transition ${isMobileMenuOpen ? 'translate-y-2 rotate-45' : ''}`} />
+              <span className={`block h-0.5 w-5 rounded-full bg-current transition ${isMobileMenuOpen ? 'opacity-0' : ''}`} />
+              <span className={`block h-0.5 w-5 rounded-full bg-current transition ${isMobileMenuOpen ? '-translate-y-2 -rotate-45' : ''}`} />
+            </span>
+          </button>
           <div className="hidden min-w-0 sm:block">
             <p className="max-w-[14rem] truncate text-sm font-black text-slate-950">{displayName}</p>
             <p className="mt-0.5 text-xs font-semibold text-slate-400">Nauczyciel</p>
           </div>
         </div>
       </div>
+
+      {isMobileMenuOpen && (
+        <div className="border-t border-zinc-100 bg-white px-4 pb-5 pt-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] lg:hidden">
+          <nav className="grid gap-5">
+            <div>
+              <p className="mb-3 px-4 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                Nauczanie
+              </p>
+              <div className="grid gap-1">
+                {tabs.map((tab) => {
+                  const isActive = tab.id === activeTab;
+                  const isUnread = tab.id === 'chats' && hasUnreadChat;
+
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => handleMobileTabChange(tab.id)}
+                      className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-black transition ${
+                        isUnread
+                          ? 'border-red-700 bg-red-50 text-red-800 shadow-[0_10px_24px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
+                          : isActive
+                            ? 'border-transparent bg-[#f6f2eb] text-[#07463f] shadow-[0_10px_24px_rgba(15,23,42,0.05)]'
+                            : 'border-transparent text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
+                      }`}
+                    >
+                      <TeacherIcon type={tab.icon} className="h-5 w-5 shrink-0" />
+                      <span className="min-w-0 flex-1">{tab.label}</span>
+                      {isUnread && (
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-600 shadow-[0_0_0_4px_rgba(220,38,38,0.14)]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-3 px-4 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                Konto
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsLogoutModalOpen(true)}
+                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
+              >
+                <TeacherIcon type="logout" className="h-5 w-5 shrink-0" />
+                Wyloguj się
+              </button>
+            </div>
+          </nav>
+        </div>
+      )}
+
+      {isLogoutModalOpen && (
+        <LogoutConfirmModal
+          onCancel={() => setIsLogoutModalOpen(false)}
+          onConfirm={onLogout}
+        />
+      )}
     </header>
   );
 }
@@ -311,7 +400,7 @@ function TeacherSidebar({ activeTab, onChange, onLogout, hasUnreadChat }) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   return (
-    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+    <aside className="hidden border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
       <div className="flex items-center justify-between gap-4 lg:block">
         <a href="/" aria-label="NaSTOmatMa" className="shrink-0 text-2xl font-extrabold tracking-tight">
           <span className="text-slate-900">Na</span>
@@ -647,29 +736,30 @@ function TeacherCalendar() {
   return (
     <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_24rem]">
     <section className="rounded-xl border border-zinc-200 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(15,23,42,0.05)] sm:px-6">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+      <div className="grid gap-5 xl:flex xl:items-center xl:justify-between">
         <div>
           <h2 className="text-2xl font-black text-slate-950">Kalendarz dostępności</h2>
           <p className="mt-2 text-base font-medium text-slate-500">
             Kliknij slot, aby dodać lub usunąć dostępność. Zarezerwowane terminy są widoczne dla korepetytora i ucznia.
           </p>
         </div>
-        <div className="flex flex-col gap-4 xl:items-end">
-          <div className="flex flex-wrap gap-3 text-sm font-bold text-slate-600">
+        <div className="grid gap-4 xl:items-end">
+          <div className="grid gap-2 text-sm font-bold text-slate-600 sm:flex sm:flex-wrap sm:gap-3">
             <LegendDot className="bg-orange-50 ring-orange-100" label="Jestem dostępny" />
             <LegendDot className="bg-rose-950 ring-rose-900" label="Już zarezerwowane" />
             <LegendDot className="bg-zinc-100 ring-zinc-200" label="Minęło" />
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-[3rem_1fr_3rem] items-center gap-3 sm:flex sm:gap-3">
             <button
               type="button"
               disabled={!canGoPrevious}
               onClick={() => moveWeek(-1)}
               className="rounded-md border-2 border-slate-300 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Poprzedni tydzień"
             >
-              Poprzedni tydzień
+              ‹
             </button>
-            <p className="min-w-[14rem] text-center text-sm font-black text-slate-700">
+            <p className="text-center text-sm font-black text-slate-700 sm:min-w-[14rem]">
               {formatWeekRange(weekDays)}
             </p>
             <button
@@ -677,8 +767,9 @@ function TeacherCalendar() {
               disabled={!canGoNext}
               onClick={() => moveWeek(1)}
               className="rounded-md border-2 border-slate-300 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Następny tydzień"
             >
-              Następny tydzień
+              ›
             </button>
           </div>
         </div>
@@ -713,33 +804,37 @@ function TeacherCalendar() {
                   type="button"
                   disabled={isDisabledDay}
                   onClick={() => setSelectedMobileDayIso(day.isoDate)}
-                  className={`rounded-xl border px-4 py-4 text-left transition ${
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
                     isDisabledDay
                       ? 'border-zinc-200 bg-zinc-100 text-slate-300'
                       : 'border-zinc-200 bg-white text-slate-950 shadow-[0_10px_24px_rgba(39,40,45,0.05)] hover:border-orange-300 hover:bg-orange-50/40'
                   } disabled:cursor-not-allowed`}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className={`text-lg font-black ${isPastDay ? 'text-slate-400' : 'text-slate-950'}`}>
-                        {day.label}
-                      </p>
-                      <p className="mt-1 text-sm font-bold text-slate-400">{day.date}</p>
-                    </div>
-                    <span className={`h-2 w-2 rounded-full ${isPastDay || isDisabledDay ? 'bg-slate-300' : 'bg-orange-600'}`} />
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black">
-                    <span className="rounded-full bg-orange-50 px-3 py-1.5 text-orange-700">
-                      {availableCount} dostępne
-                    </span>
-                    <span className="rounded-full bg-rose-50 px-3 py-1.5 text-rose-800">
-                      {bookedCount} zajęte
-                    </span>
-                    {pendingCount > 0 && (
-                      <span className="rounded-full bg-red-50 px-3 py-1.5 text-red-700">
-                        {pendingCount} próśb
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-black ${isPastDay || isDisabledDay ? 'bg-white text-slate-400' : 'bg-[#eef5ee] text-[#07463f]'}`}>
+                        {day.date}
                       </span>
-                    )}
+                      <div>
+                        <p className={`text-base font-black ${isPastDay ? 'text-slate-400' : 'text-slate-950'}`}>
+                          {day.label}
+                        </p>
+                        <p className="mt-0.5 text-xs font-bold text-slate-400">Kliknij, aby zobaczyć godziny</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1 text-[10px] font-black">
+                      <span className="rounded-full bg-orange-50 px-2.5 py-1 text-orange-700">
+                        {availableCount} dostępne
+                      </span>
+                      <span className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-800">
+                        {bookedCount} zajęte
+                      </span>
+                      {pendingCount > 0 && (
+                        <span className="rounded-full bg-red-50 px-2.5 py-1 text-red-700">
+                          {pendingCount} próśb
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               );
@@ -1329,8 +1424,8 @@ function StudentsPanel({ mode = 'students' }) {
     : 'Kliknij ucznia, żeby zobaczyć dane z ankiety, żetony i kontakt.';
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-      <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
+    <section className="grid min-w-0 gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+      <div className="min-w-0 rounded-xl border border-orange-100 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-6 sm:py-7">
         <h2 className="text-2xl font-black text-slate-950">{sectionTitle}</h2>
         <p className="mt-2 text-base font-medium text-slate-500">
           {sectionDescription}
@@ -1390,7 +1485,7 @@ function StudentsPanel({ mode = 'students' }) {
                 key={student.id}
                 type="button"
                 onClick={() => setSelectedStudentId(student.id)}
-                className={`flex w-full items-center gap-4 rounded-lg border px-4 py-4 text-left transition ${
+                className={`flex w-full min-w-0 items-center gap-3 rounded-lg border px-4 py-4 text-left transition sm:gap-4 ${
                   hasUnread
                     ? 'border-red-700 bg-red-50 shadow-[0_14px_30px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
                     : student.id === selectedStudentId
@@ -1398,22 +1493,22 @@ function StudentsPanel({ mode = 'students' }) {
                       : 'border-transparent bg-[#fcfaf7] hover:bg-orange-50/70'
                 }`}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-lg font-black text-white">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-600 text-base font-black text-white sm:h-12 sm:w-12 sm:text-lg">
                   {student.initial}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-base font-black text-slate-950">{student.name}</span>
+                  <span className="block truncate text-base font-black text-slate-950">{student.name}</span>
                   {hasUnread && (
                     <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700">
                       Nowa wiadomość
                     </span>
                   )}
                   <span className="block truncate text-sm font-semibold text-slate-500">{student.email}</span>
-                  <span className="mt-2 flex flex-wrap gap-2">
-                    <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-700">
+                  <span className="mt-2 grid max-w-full grid-cols-1 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+                    <span className="inline-flex w-fit rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-700">
                       {student.tokens ?? 0} żetonów
                     </span>
-                    <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">
+                    <span className="inline-flex w-fit max-w-full truncate rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-500">
                       Dodany: {student.created_at || 'Brak daty'}
                     </span>
                   </span>
@@ -1428,7 +1523,7 @@ function StudentsPanel({ mode = 'students' }) {
       </div>
 
       {mode === 'chats' ? (
-        <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
+        <div className="min-w-0 rounded-xl border border-orange-100 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-6 sm:py-7">
           <h2 className="text-2xl font-black text-slate-950">
             {selectedStudent ? `Czat: ${selectedStudent.name}` : 'Czat'}
           </h2>
@@ -1445,7 +1540,7 @@ function StudentsPanel({ mode = 'students' }) {
 
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.own ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-xl rounded-xl px-5 py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
+                <div className={`max-w-full rounded-xl px-4 py-3 sm:max-w-xl sm:px-5 sm:py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
                   <p className="text-sm font-black">{message.own ? 'Ty' : message.author} · {message.time}</p>
                   <p className="mt-2 text-base font-medium leading-7">{message.body}</p>
                 </div>
@@ -1453,16 +1548,16 @@ function StudentsPanel({ mode = 'students' }) {
             ))}
           </div>
 
-          <form className="mt-6 flex gap-3" onSubmit={handleSendMessage}>
+          <form className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] gap-3" onSubmit={handleSendMessage}>
             <input
               type="text"
               placeholder="Napisz wiadomość..."
               disabled={!selectedStudent}
               value={draftMessage}
               onChange={(event) => setDraftMessage(event.target.value)}
-              className="h-14 min-w-0 flex-1 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-5 text-base font-medium outline-none focus:border-orange-600 focus:bg-white"
+              className="h-14 min-w-0 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-4 text-base font-medium outline-none focus:border-orange-600 focus:bg-white sm:px-5"
             />
-            <button type="submit" disabled={!selectedStudent} className="rounded-md bg-orange-600 px-6 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">
+            <button type="submit" disabled={!selectedStudent} className="rounded-md bg-orange-600 px-4 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6">
               Wyślij
             </button>
           </form>

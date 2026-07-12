@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../api.js';
 import subjectPrimaryImage from '../../images/A1.png';
 import subjectMaturaImage from '../../images/A2.png';
@@ -708,6 +708,11 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
           initial={initial}
           tokens={tokens}
           notifications={lessonNotifications}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+          onLogout={onLogout}
+          hasImportantOnboarding={hasImportantOnboarding}
+          hasUnreadChat={hasUnreadChat}
         />
 
         <div className="px-4 py-8 sm:px-6 lg:px-10">
@@ -766,7 +771,7 @@ function StudentSidebar({ activeTab, onChange, onLogout, hasImportantOnboarding,
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   return (
-    <aside className="border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
+    <aside className="hidden border-b border-zinc-200 bg-white px-4 py-5 lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5">
       <div className="flex items-center justify-between gap-4 lg:block">
         <a
           href="/"
@@ -873,9 +878,25 @@ function SidebarButton({ item, isActive, isImportant = false, isUnread = false, 
   );
 }
 
-function StudentHeader({ displayName, initial, tokens, notifications = [] }) {
+function StudentHeader({
+  displayName,
+  initial,
+  tokens,
+  notifications = [],
+  activeTab,
+  onChange,
+  onLogout,
+  hasImportantOnboarding,
+  hasUnreadChat,
+}) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const notificationCount = notifications.length;
+  const handleMobileTabChange = (tabId) => {
+    onChange(tabId);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
@@ -963,17 +984,77 @@ function StudentHeader({ displayName, initial, tokens, notifications = [] }) {
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
             {initial}
           </span>
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-[#07463f] transition hover:border-[#007566] hover:bg-[#f3faf7] lg:hidden"
+            aria-label={isMobileMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className="sr-only">{isMobileMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}</span>
+            <span className="grid gap-1.5">
+              <span className={`block h-0.5 w-5 rounded-full bg-current transition ${isMobileMenuOpen ? 'translate-y-2 rotate-45' : ''}`} />
+              <span className={`block h-0.5 w-5 rounded-full bg-current transition ${isMobileMenuOpen ? 'opacity-0' : ''}`} />
+              <span className={`block h-0.5 w-5 rounded-full bg-current transition ${isMobileMenuOpen ? '-translate-y-2 -rotate-45' : ''}`} />
+            </span>
+          </button>
           <div className="hidden min-w-0 sm:block">
             <p className="max-w-[14rem] truncate text-sm font-black text-slate-950">{displayName}</p>
             <p className="mt-0.5 text-xs font-semibold text-slate-400">Uczeń</p>
           </div>
         </div>
       </div>
+
+      {isMobileMenuOpen && (
+        <div className="border-t border-zinc-100 bg-white px-4 pb-5 pt-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] lg:hidden">
+          <nav className="grid gap-5">
+            <SidebarGroup title="Nauka">
+              {tabs.map((item) => (
+                <SidebarButton
+                  key={item.id}
+                  item={item}
+                  isActive={activeTab === item.id}
+                  isUnread={item.id === 'chat' && hasUnreadChat}
+                  onClick={() => handleMobileTabChange(item.id)}
+                />
+              ))}
+            </SidebarGroup>
+
+            <SidebarGroup title="Konto">
+              {accountItems.map((item) => (
+                <SidebarButton
+                  key={item.id}
+                  item={item}
+                  isActive={activeTab === item.id}
+                  isImportant={item.id === 'profile' && hasImportantOnboarding}
+                  onClick={() => handleMobileTabChange(item.id)}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setIsLogoutModalOpen(true)}
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
+              >
+                <TabIcon type="logout" className="h-5 w-5 shrink-0" />
+                Wyloguj się
+              </button>
+            </SidebarGroup>
+          </nav>
+        </div>
+      )}
+
+      {isLogoutModalOpen && (
+        <LogoutConfirmModal
+          onCancel={() => setIsLogoutModalOpen(false)}
+          onConfirm={onLogout}
+        />
+      )}
     </header>
   );
 }
 
 function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
+  const lessonDetailsRef = useRef(null);
   const [weekStart, setWeekStart] = useState(getWeekStart());
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
@@ -1229,11 +1310,26 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   const selectAvailableSlot = (slot) => {
     setSelectedSlotId(slot.id);
     setStatus({ type: null, message: '' });
+    scrollToLessonDetailsOnMobile();
   };
 
   const selectLessonSlot = (slot) => {
     setSelectedSlotId(slot.id);
     setStatus({ type: null, message: '' });
+    scrollToLessonDetailsOnMobile();
+  };
+
+  const scrollToLessonDetailsOnMobile = () => {
+    if (!window.matchMedia('(max-width: 1023px)').matches) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      lessonDetailsRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 80);
   };
 
   const openBookingConfirm = (slot = selectedSlot) => {
@@ -1290,73 +1386,75 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   return (
     <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
       <section className="rounded-xl border border-zinc-200 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(15,23,42,0.05)] sm:px-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="grid gap-5 xl:flex xl:items-center xl:justify-between">
           <div>
             <h2 className="text-2xl font-black text-[#07463f]">Kalendarz terminów</h2>
             <p className="mt-2 text-base font-medium text-slate-500">
               Wybierz wolny termin i zarezerwuj lekcję.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={() => setWeekStart(getWeekStart())}
-              className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-[#b7d5c8] hover:text-[#07463f]"
+              className="order-2 w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-[#b7d5c8] hover:text-[#07463f] sm:order-none sm:w-auto"
             >
               Dzisiaj
             </button>
-            <button
-              type="button"
-              disabled={!canGoPrevious}
-              onClick={() => moveWeek(-1)}
-              className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-[#b7d5c8] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ‹
-            </button>
-            <p className="min-w-[14rem] text-center text-sm font-black text-slate-700">
-              {formatWeekRange(weekStart)}
-            </p>
-            <button
-              type="button"
-              disabled={!canGoNext}
-              onClick={() => moveWeek(1)}
-              className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-[#b7d5c8] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ›
-            </button>
+            <div className="order-1 grid grid-cols-[3rem_1fr_3rem] items-center gap-3 sm:order-none sm:flex sm:gap-3">
+              <button
+                type="button"
+                disabled={!canGoPrevious}
+                onClick={() => moveWeek(-1)}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-[#b7d5c8] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ‹
+              </button>
+              <p className="text-center text-sm font-black text-slate-700 sm:min-w-[14rem]">
+                {formatWeekRange(weekStart)}
+              </p>
+              <button
+                type="button"
+                disabled={!canGoNext}
+                onClick={() => moveWeek(1)}
+                className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:border-[#b7d5c8] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ›
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <p className="mr-1 text-sm font-bold text-slate-500">
+        <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <p className="text-sm font-bold text-slate-500 sm:mr-1">
             Wybierz korepetytora:
           </p>
+          <div className="grid grid-cols-2 gap-3 sm:contents">
             {teachers.map((teacher) => (
               <button
                 key={teacher.id}
                 type="button"
                 onClick={() => chooseTeacher(teacher.id)}
-                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
+                className={`relative flex min-w-0 items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
                   teacher.id === selectedTeacherId
                     ? 'border-[#0a604f] bg-[#eef5ee] shadow-[0_10px_24px_rgba(7,70,63,0.1)]'
                     : 'border-zinc-200 bg-white hover:border-[#b7d5c8]'
                 }`}
               >
+                {teacher.id === selectedTeacherId && (
+                  <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#007566] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+                    Wybrany
+                  </span>
+                )}
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0a604f] text-sm font-black text-white">
                   {teacher.initial}
                 </span>
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2">
-                    <span className="block text-sm font-black text-slate-950">{teacher.name}</span>
-                    {preferredTeacher?.id === teacher.id && (
-                      <span className="rounded-full bg-[#007566] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
-                        Wybrany
-                      </span>
-                    )}
-                  </span>
+                  <span className="block truncate text-sm font-black text-slate-950">{teacher.name}</span>
                 </span>
               </button>
             ))}
+          </div>
 
           {teachers.length === 0 && (
             <p className="rounded-lg bg-white px-4 py-4 text-sm font-bold text-slate-500">
@@ -1404,31 +1502,35 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                     key={day.isoDate}
                     type="button"
                     onClick={() => setSelectedMobileDayIso(day.isoDate)}
-                    className={`rounded-xl border border-zinc-200 px-4 py-4 text-left text-slate-950 shadow-[0_10px_24px_rgba(39,40,45,0.05)] transition hover:border-orange-300 hover:bg-orange-50/40 ${isPastDay ? 'bg-zinc-100' : 'bg-white'}`}
+                    className={`rounded-xl border border-zinc-200 px-4 py-3 text-left text-slate-950 shadow-[0_10px_24px_rgba(39,40,45,0.05)] transition hover:border-orange-300 hover:bg-orange-50/40 ${isPastDay ? 'bg-zinc-100' : 'bg-white'}`}
                   >
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className={`text-lg font-black ${isPastDay ? 'text-slate-400' : 'text-slate-950'}`}>
-                          {day.label}
-                        </p>
-                        <p className="mt-1 text-sm font-bold text-slate-400">{day.date}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-black ${isPastDay ? 'bg-white text-slate-400' : 'bg-[#eef5ee] text-[#07463f]'}`}>
+                          {day.date}
+                        </span>
+                        <div>
+                          <p className={`text-base font-black ${isPastDay ? 'text-slate-400' : 'text-slate-950'}`}>
+                            {day.label}
+                          </p>
+                          <p className="mt-0.5 text-xs font-bold text-slate-400">Kliknij, aby zobaczyć godziny</p>
+                        </div>
                       </div>
-                      <span className={`h-2 w-2 rounded-full ${isPastDay ? 'bg-slate-300' : 'bg-orange-600'}`} />
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black">
-                      <span className="rounded-full bg-orange-50 px-3 py-1.5 text-orange-700">
-                        {availableCount} wolne
-                      </span>
-                      {ownPendingCount > 0 && (
-                        <span className="rounded-full bg-orange-500 px-3 py-1.5 text-white">
-                          {ownPendingCount} oczekuje
+                      <div className="flex shrink-0 flex-col items-end gap-1 text-[10px] font-black">
+                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-orange-700">
+                          {availableCount} wolne
                         </span>
-                      )}
-                      {ownBookedCount > 0 && (
-                        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-800">
-                          {ownBookedCount} zaakcept.
-                        </span>
-                      )}
+                        {ownPendingCount > 0 && (
+                          <span className="rounded-full bg-orange-500 px-2.5 py-1 text-white">
+                            {ownPendingCount} oczekuje
+                          </span>
+                        )}
+                        {ownBookedCount > 0 && (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">
+                            {ownBookedCount} zaakcept.
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
@@ -1652,37 +1754,39 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
         </div>
       </section>
 
-      {selectedSlot ? (
-        <LessonDetailsPanel
-          slot={selectedSlot}
-          teacher={selectedTeacher}
-          selectedPlace={selectedLessonPlace}
-          onPlaceChange={setSelectedLessonPlace}
-          onReserve={() => openBookingConfirm(selectedSlot)}
-          onCancelReservation={() => openCancelConfirm(selectedSlot)}
-          scopeMessage={lessonScopeMessage}
-          onScopeMessageChange={(value) => {
-            setLessonScopeMessage(value);
-            if (value.trim()) {
-              setIsLessonScopeRequired(false);
-            }
-          }}
-          isScopeRequired={isLessonScopeRequired}
-          isBooking={bookingSlotId === selectedSlot.id}
-          isCanceling={cancelingSlotId === selectedSlot.id}
-          canReserve={selectedSlot.status === 'available' && !isPastSlot(selectedSlot)}
-          canCancel={(
-            selectedSlot.status === 'pending'
-            || (selectedSlot.status === 'booked' && selectedSlot.can_cancel)
-          ) && selectedSlot.student?.id === user?.id && !isPastSlot(selectedSlot)}
-        />
-      ) : (
-        <UpcomingLessonsPanel
-          slot={upcomingLessonSlot}
-          teacher={selectedTeacher}
-          isLoading={isLoading || isUpcomingLoading}
-        />
-      )}
+      <div ref={lessonDetailsRef}>
+        {selectedSlot ? (
+          <LessonDetailsPanel
+            slot={selectedSlot}
+            teacher={selectedTeacher}
+            selectedPlace={selectedLessonPlace}
+            onPlaceChange={setSelectedLessonPlace}
+            onReserve={() => openBookingConfirm(selectedSlot)}
+            onCancelReservation={() => openCancelConfirm(selectedSlot)}
+            scopeMessage={lessonScopeMessage}
+            onScopeMessageChange={(value) => {
+              setLessonScopeMessage(value);
+              if (value.trim()) {
+                setIsLessonScopeRequired(false);
+              }
+            }}
+            isScopeRequired={isLessonScopeRequired}
+            isBooking={bookingSlotId === selectedSlot.id}
+            isCanceling={cancelingSlotId === selectedSlot.id}
+            canReserve={selectedSlot.status === 'available' && !isPastSlot(selectedSlot)}
+            canCancel={(
+              selectedSlot.status === 'pending'
+              || (selectedSlot.status === 'booked' && selectedSlot.can_cancel)
+            ) && selectedSlot.student?.id === user?.id && !isPastSlot(selectedSlot)}
+          />
+        ) : (
+          <UpcomingLessonsPanel
+            slot={upcomingLessonSlot}
+            teacher={selectedTeacher}
+            isLoading={isLoading || isUpcomingLoading}
+          />
+        )}
+      </div>
 
       {slotToConfirm && (
         <ConfirmBookingModal
@@ -2149,6 +2253,15 @@ function DetailBlock({ title, children }) {
 }
 
 function TutorsPanel({ onOpenChat }) {
+  const [expandedMobileTutors, setExpandedMobileTutors] = useState({});
+
+  const toggleMobileTutor = (tutorName) => {
+    setExpandedMobileTutors((current) => ({
+      ...current,
+      [tutorName]: !current[tutorName],
+    }));
+  };
+
   return (
     <section className="bg-[#fffdf9]">
       <div className="text-center">
@@ -2163,7 +2276,13 @@ function TutorsPanel({ onOpenChat }) {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {tutorProfiles.map((tutor) => (
-          <StudentTutorProfileCard key={tutor.name} tutor={tutor} onOpenChat={onOpenChat} />
+          <StudentTutorProfileCard
+            key={tutor.name}
+            tutor={tutor}
+            isMobileExpanded={Boolean(expandedMobileTutors[tutor.name])}
+            onToggleMobile={() => toggleMobileTutor(tutor.name)}
+            onOpenChat={onOpenChat}
+          />
         ))}
       </div>
 
@@ -2401,7 +2520,7 @@ function StudentContactModal({ mode, onClose }) {
   );
 }
 
-function StudentTutorProfileCard({ tutor, onOpenChat }) {
+function StudentTutorProfileCard({ tutor, isMobileExpanded, onToggleMobile, onOpenChat }) {
   const details = [
     {
       icon: <TabIcon type="profile" className="h-5 w-5" />,
@@ -2419,6 +2538,7 @@ function StudentTutorProfileCard({ tutor, onOpenChat }) {
       value: tutor.style,
     },
   ];
+  const mobileDetailsId = `student-tutor-details-${tutor.name.toLowerCase()}`;
 
   return (
     <article className="rounded-2xl border border-zinc-200 bg-white px-6 py-7 shadow-[0_14px_28px_rgba(15,23,42,0.08)] sm:px-8 sm:py-9 lg:px-10">
@@ -2437,7 +2557,38 @@ function StudentTutorProfileCard({ tutor, onOpenChat }) {
         </div>
       </div>
 
-      <div className="mt-9">
+      <button
+        type="button"
+        onClick={onToggleMobile}
+        className="mt-6 flex w-full items-center justify-between rounded-lg border border-[#cde4d8] bg-[#f3faf7] px-4 py-3 text-left text-sm font-black text-[#07463f] transition hover:bg-[#e8f4ef] sm:hidden"
+        aria-expanded={isMobileExpanded}
+        aria-controls={mobileDetailsId}
+      >
+        <span>{isMobileExpanded ? 'Zwiń informacje o korepetytorze' : 'Rozwiń informacje o korepetytorze'}</span>
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className={`h-5 w-5 shrink-0 transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`}
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+          />
+        </svg>
+      </button>
+
+      <div
+        id={mobileDetailsId}
+        className={`overflow-hidden transition-all duration-700 ease-out ${
+          isMobileExpanded
+            ? 'mt-7 max-h-[980px] opacity-100'
+            : 'mt-0 max-h-0 opacity-0'
+        } sm:mt-9 sm:max-h-none sm:overflow-visible sm:opacity-100`}
+      >
         <div className="grid gap-5 text-center sm:grid-cols-3 sm:gap-6">
           {details.map((detail) => (
             <div key={detail.label}>
@@ -3564,8 +3715,8 @@ function ChatPanel({ onboardingAnswers }) {
   };
 
   return (
-    <section className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
-      <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
+    <section className="grid min-w-0 gap-6 xl:grid-cols-[0.75fr_1.25fr]">
+      <div className="min-w-0 rounded-xl border border-orange-100 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-6 sm:py-7">
         <h2 className="text-2xl font-black text-slate-950">Korepetytorzy</h2>
         <div className="mt-6 space-y-3">
           {teachers.length === 0 && (
@@ -3584,35 +3735,35 @@ function ChatPanel({ onboardingAnswers }) {
                 key={teacher.id}
                 type="button"
                 onClick={() => setSelectedTeacherId(teacher.id)}
-                className={`flex w-full items-center gap-4 rounded-lg border text-left transition ${
+                className={`relative flex w-full min-w-0 items-center gap-3 rounded-lg border text-left transition sm:gap-4 ${
                   hasUnread
-                    ? 'border-red-700 bg-red-50 px-5 py-5 shadow-[0_14px_30px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100'
+                    ? 'border-red-700 bg-red-50 px-4 py-4 shadow-[0_14px_30px_rgba(153,27,27,0.12)] ring-2 ring-red-200 hover:bg-red-100 sm:px-5 sm:py-5'
                   : isPreferred
-                    ? 'border-[#007566] bg-[#eef5ee] px-5 py-5 shadow-[0_14px_30px_rgba(0,117,102,0.12)] ring-2 ring-[#b7d5c8]'
+                    ? 'border-[#007566] bg-[#eef5ee] px-4 py-4 shadow-[0_14px_30px_rgba(0,117,102,0.12)] ring-2 ring-[#b7d5c8] sm:px-5 sm:py-5'
                     : isSelected
                       ? 'border-orange-200 bg-orange-50 px-4 py-4'
                       : 'border-transparent bg-[#fcfaf7] px-4 py-4 hover:bg-orange-50'
                 }`}
               >
+                {isPreferred && (
+                  <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wide text-[#007566] shadow-sm">
+                    Wybrany
+                  </span>
+                )}
                 <span className={`flex shrink-0 items-center justify-center rounded-full font-black text-white ${
                   isPreferred
-                    ? 'h-16 w-16 bg-[#007566] text-2xl shadow-[0_12px_24px_rgba(0,117,102,0.22)]'
+                    ? 'h-12 w-12 bg-[#007566] text-lg shadow-[0_12px_24px_rgba(0,117,102,0.22)] sm:h-16 sm:w-16 sm:text-2xl'
                     : 'h-12 w-12 bg-orange-600 text-lg'
                 }`}>
                   {teacher.initial}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={`block font-black ${isPreferred ? 'text-xl text-[#07463f]' : 'text-base text-slate-950'}`}>
+                  <span className={`block truncate font-black ${isPreferred ? 'text-lg text-[#07463f] sm:text-xl' : 'text-base text-slate-950'}`}>
                     {teacher.name}
                   </span>
                   {hasUnread && (
                     <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700">
                       Nowa wiadomość
-                    </span>
-                  )}
-                  {isPreferred && (
-                    <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#007566]">
-                      Wybrany korepetytor
                     </span>
                   )}
                   <span className={`block truncate font-semibold ${isPreferred ? 'mt-2 text-sm text-[#527b68]' : 'text-sm text-slate-500'}`}>
@@ -3628,7 +3779,7 @@ function ChatPanel({ onboardingAnswers }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-orange-100 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(39,40,45,0.06)]">
+      <div className="min-w-0 rounded-xl border border-orange-100 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(39,40,45,0.06)] sm:px-6 sm:py-7">
         <h2 className="text-2xl font-black text-slate-950">
           {selectedTeacher ? `Czat z ${selectedTeacher.name}` : 'Czat'}
         </h2>
@@ -3648,23 +3799,23 @@ function ChatPanel({ onboardingAnswers }) {
 
           {chatMessages.map((message) => (
             <div key={message.id} className={`flex ${message.own ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-xl rounded-xl px-5 py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
+              <div className={`max-w-full rounded-xl px-4 py-3 sm:max-w-xl sm:px-5 sm:py-4 ${message.own ? 'bg-orange-600 text-white' : 'bg-[#fcfaf7] text-slate-700'}`}>
                 <p className="text-sm font-black">{message.author} · {message.time}</p>
                 <p className="mt-2 text-base font-medium leading-7">{message.body}</p>
               </div>
             </div>
           ))}
         </div>
-        <form className="mt-6 flex gap-3" onSubmit={handleSendMessage}>
+        <form className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] gap-3" onSubmit={handleSendMessage}>
           <input
             type="text"
             placeholder="Napisz wiadomość..."
             disabled={!selectedTeacher}
             value={draftMessage}
             onChange={(event) => setDraftMessage(event.target.value)}
-            className="h-14 min-w-0 flex-1 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-5 text-base font-medium outline-none focus:border-orange-600 focus:bg-white"
+            className="h-14 min-w-0 rounded-md border-2 border-zinc-200 bg-[#fcfaf7] px-4 text-base font-medium outline-none focus:border-orange-600 focus:bg-white sm:px-5"
           />
-          <button type="submit" disabled={!selectedTeacher} className="rounded-md bg-orange-600 px-6 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="submit" disabled={!selectedTeacher} className="rounded-md bg-orange-600 px-4 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6">
             Wyślij
           </button>
         </form>
