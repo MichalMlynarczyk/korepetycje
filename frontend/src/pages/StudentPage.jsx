@@ -4,7 +4,6 @@ import subjectPrimaryImage from '../../images/A1.png';
 import subjectMaturaImage from '../../images/A2.png';
 import subjectExtraImage from '../../images/A3.png';
 import formatOnlineImage from '../../images/A4.png';
-import formatOnsiteImage from '../../images/A5.png';
 
 const contactPhoneDisplay = '+48 000 000 000';
 const contactPhoneHref = '+48000000000';
@@ -18,6 +17,7 @@ const tabs = [
 ];
 
 const accountItems = [
+  { id: 'notifications', label: 'Powiadomienia', icon: 'bell' },
   { id: 'profile', label: 'Profil', icon: 'profile' },
   { id: 'payments', label: 'Cennik i płatności', icon: 'payment' },
 ];
@@ -171,12 +171,10 @@ const onboardingSubjects = [
 
 const tutoringFormats = [
   { id: 'online', label: 'Online', profileLabel: 'Zdalnie', description: 'Lekcje zdalne z materiałami w panelu.', image: formatOnlineImage },
-  { id: 'krakow', label: 'Na miejscu', profileLabel: 'Na miejscu', description: 'Spotkania stacjonarne w Krakowie.', image: formatOnsiteImage },
 ];
 
 const lessonPlaceOptions = [
   { id: 'online', label: 'Online', helper: 'Link do spotkania pojawi się w materiałach.', icon: 'video' },
-  { id: 'onsite', label: 'Na miejscu', helper: 'Szczegóły adresu ustalisz z korepetytorem.', icon: 'location' },
 ];
 
 const onboardingTutors = [
@@ -252,7 +250,7 @@ const tutorProfiles = [
 ];
 
 const calendarPastDays = 14;
-const calendarFutureDays = 28;
+const minimumBookingNoticeHours = 12;
 const chatRefreshMs = 5000;
 const hours = ['9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 const dayLabels = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Niedz'];
@@ -305,12 +303,40 @@ function getWeekDays(weekStart) {
   });
 }
 
+function getEndOfNextMonth(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth() + 2, 0, 12);
+}
+
+function getMonthCalendarDays(monthDate) {
+  const firstOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1, 12);
+  const gridStart = getWeekStart(firstOfMonth);
+
+  return Array.from({ length: 35 }, (_, index) => {
+    const date = addDays(gridStart, index);
+    return {
+      label: dayLabels[index % 7],
+      date: String(date.getDate()),
+      isoDate: formatIsoDate(date),
+      isCurrentMonth: date.getMonth() === monthDate.getMonth(),
+    };
+  });
+}
+
 function isPastSlot(slot) {
   return new Date(`${slot.date}T${slot.start_time}:00`) <= new Date();
 }
 
 function isPastSlotTime(isoDate, startTime) {
   return new Date(`${isoDate}T${startTime}:00`) <= new Date();
+}
+
+function isSlotBookable(slot) {
+  if (!slot) {
+    return false;
+  }
+
+  const minimumStartTime = new Date(Date.now() + minimumBookingNoticeHours * 60 * 60 * 1000);
+  return new Date(`${slot.date}T${slot.start_time}:00`) >= minimumStartTime;
 }
 
 function formatRemainingTime(targetIsoDate, now = new Date()) {
@@ -343,6 +369,10 @@ function formatWeekRange(weekStart) {
   const formatter = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'long' });
 
   return `${formatter.format(firstDay)} - ${formatter.format(lastDay)}`;
+}
+
+function formatCalendarMonth(date) {
+  return new Intl.DateTimeFormat('pl-PL', { month: 'long', year: 'numeric' }).format(date);
 }
 
 async function fetchCalendarSlots(weekStart, teacherId) {
@@ -492,6 +522,24 @@ function getOnboardingAnswersStorageKey(userId) {
   return `nastomatma:onboarding-answers:${userId}`;
 }
 
+function getNotificationSeenStorageKey(userId) {
+  return `nastomatma:notifications-seen:${userId}`;
+}
+
+function getStoredNotificationSeenId(userId) {
+  if (!userId || typeof window === 'undefined') {
+    return 0;
+  }
+
+  return Number(window.localStorage.getItem(getNotificationSeenStorageKey(userId)) || 0);
+}
+
+function getLatestNotificationId(notifications) {
+  return notifications.reduce((latestId, notification) => (
+    Math.max(latestId, Number(notification.id) || 0)
+  ), 0);
+}
+
 function hasCompletedOnboarding(userId) {
   if (!userId || typeof window === 'undefined') {
     return false;
@@ -566,10 +614,14 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
   const [contactModalMode, setContactModalMode] = useState(null);
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
   const [lessonNotifications, setLessonNotifications] = useState([]);
+  const [notificationSeenId, setNotificationSeenId] = useState(() => getStoredNotificationSeenId(user?.id));
   const displayName = user?.full_name || user?.email || 'Uczeń';
   const initial = displayName.trim().charAt(0).toUpperCase() || 'U';
   const firstName = displayName.split(' ')[0] || 'uczniu';
   const hasImportantOnboarding = !isOnboardingComplete(onboardingAnswers);
+  const unreadNotificationCount = lessonNotifications.filter((notification) => (
+    Number(notification.id) > notificationSeenId
+  )).length;
 
   useEffect(() => {
     setTokens(user?.tokens ?? 0);
@@ -577,6 +629,7 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
 
   useEffect(() => {
     setOnboardingAnswers(getInitialOnboardingAnswers(user));
+    setNotificationSeenId(getStoredNotificationSeenId(user?.id));
   }, [user?.id, user?.onboarding_answers]);
 
   useEffect(() => {
@@ -667,6 +720,25 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
     };
   }, [user?.id]);
 
+  const markNotificationsSeen = (notifications = lessonNotifications) => {
+    const latestNotificationId = getLatestNotificationId(notifications);
+
+    setNotificationSeenId(latestNotificationId);
+
+    if (user?.id && typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        getNotificationSeenStorageKey(user.id),
+        String(latestNotificationId),
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'notifications') {
+      markNotificationsSeen();
+    }
+  }, [activeTab, lessonNotifications]);
+
   const handleOnboardingComplete = async (answers) => {
     if (user?.id && typeof window !== 'undefined') {
       window.localStorage.setItem(getOnboardingStorageKey(user.id), 'completed');
@@ -707,7 +779,8 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
           displayName={displayName}
           initial={initial}
           tokens={tokens}
-          notifications={lessonNotifications}
+          notificationCount={unreadNotificationCount}
+          onOpenNotifications={() => handleTabChange('notifications')}
           activeTab={activeTab}
           onChange={handleTabChange}
           onLogout={onLogout}
@@ -715,8 +788,8 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
           hasUnreadChat={hasUnreadChat}
         />
 
-        <div className="px-4 py-8 sm:px-6 lg:px-10">
-          <div>
+        <div className="px-4 py-0 sm:px-6 sm:py-8 lg:px-10">
+          <div className="hidden sm:block">
             <h1 className="text-4xl font-black leading-tight text-[#07463f] sm:text-5xl">
               Cześć, {firstName}
             </h1>
@@ -725,7 +798,7 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
             </p>
           </div>
 
-          <div className="mt-7">
+          <div className="mt-0 sm:mt-7">
             {activeTab === 'calendar' && (
               <CalendarPanel
                 user={user}
@@ -737,6 +810,9 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
             {activeTab === 'tutors' && <TutorsPanel onOpenChat={() => setActiveTab('chat')} />}
             {activeTab === 'chat' && <ChatPanel onboardingAnswers={onboardingAnswers} />}
             {activeTab === 'notes' && <NotesPanel />}
+            {activeTab === 'notifications' && (
+              <NotificationsPanel notifications={lessonNotifications} />
+            )}
             {activeTab === 'profile' && (
               <ProfilePanel
                 user={user}
@@ -808,13 +884,13 @@ function StudentSidebar({ activeTab, onChange, onLogout, hasImportantOnboarding,
         <div className="lg:mt-auto">
           <SidebarGroup title="Konto">
             {accountItems.map((item) => (
-              <SidebarButton
-                key={item.id}
-                item={item}
-                isActive={activeTab === item.id}
-                isImportant={item.id === 'profile' && hasImportantOnboarding}
-                onClick={() => onChange(item.id)}
-              />
+                <SidebarButton
+                  key={item.id}
+                  item={item}
+                  isActive={activeTab === item.id}
+                  isImportant={item.id === 'profile' && hasImportantOnboarding}
+                  onClick={() => onChange(item.id)}
+                />
             ))}
             <button
               type="button"
@@ -854,7 +930,7 @@ function SidebarButton({ item, isActive, isImportant = false, isUnread = false, 
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-black transition ${
+      className={`flex items-center gap-4 rounded-lg border px-4 py-4 text-left text-base font-black transition lg:gap-3 lg:py-3 lg:text-sm ${
         isImportant
           ? 'border-orange-200 bg-orange-100 text-orange-800 shadow-[0_10px_24px_rgba(234,88,12,0.12)] ring-1 ring-orange-200 hover:bg-orange-200'
         : isUnread
@@ -864,7 +940,7 @@ function SidebarButton({ item, isActive, isImportant = false, isUnread = false, 
           : 'border-transparent text-slate-600 hover:bg-[#f6f2eb] hover:text-[#07463f]'
       }`}
     >
-      <TabIcon type={item.icon} className="h-5 w-5 shrink-0" />
+      <TabIcon type={item.icon} className="h-6 w-6 shrink-0 lg:h-5 lg:w-5" />
       <span className="min-w-0 flex-1">{item.label}</span>
       {isImportant && (
         <span className="rounded-full bg-orange-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
@@ -882,24 +958,36 @@ function StudentHeader({
   displayName,
   initial,
   tokens,
-  notifications = [],
+  notificationCount = 0,
+  onOpenNotifications,
   activeTab,
   onChange,
   onLogout,
   hasImportantOnboarding,
   hasUnreadChat,
 }) {
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const notificationCount = notifications.length;
   const handleMobileTabChange = (tabId) => {
     onChange(tabId);
     setIsMobileMenuOpen(false);
   };
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileMenuOpen]);
+
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-[80] border-b border-zinc-200 bg-white">
       <div className="flex min-h-20 items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-[#fbfaf7] px-4 py-2 text-sm font-black text-slate-600">
           <TabIcon type="tokens" className="h-4 w-4 text-[#07463f]" />
@@ -910,7 +998,7 @@ function StudentHeader({
           <div className="relative">
             <button
               type="button"
-              onClick={() => setIsNotificationsOpen((isOpen) => !isOpen)}
+              onClick={onOpenNotifications}
               className={`relative flex h-10 w-10 items-center justify-center rounded-full border transition ${
                 notificationCount > 0
                   ? 'border-orange-200 bg-orange-50 text-orange-700 shadow-[0_8px_18px_rgba(234,88,12,0.12)]'
@@ -925,65 +1013,15 @@ function StudentHeader({
                 </span>
               )}
             </button>
-
-            {isNotificationsOpen && (
-              <div className="absolute right-0 top-12 z-50 w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-orange-100 bg-white p-4 text-left shadow-[0_18px_50px_rgba(15,23,42,0.16)]">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-black text-slate-950">Powiadomienia</h2>
-                  {notificationCount > 0 && (
-                    <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-black text-orange-700">
-                      {notificationCount}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-4 grid gap-3">
-                  {notificationCount === 0 && (
-                    <p className="rounded-lg bg-[#fcfaf7] px-4 py-4 text-sm font-bold text-slate-500">
-                      Brak nowych powiadomień o korepetycjach.
-                    </p>
-                  )}
-
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`rounded-lg border px-4 py-4 ${
-                        notification.type === 'rejected'
-                          ? 'border-red-100 bg-red-50'
-                          : notification.type === 'tokens'
-                            ? 'border-orange-100 bg-orange-50'
-                          : 'border-emerald-100 bg-emerald-50'
-                      }`}
-                    >
-                      <p className={`text-sm font-black ${
-                        notification.type === 'rejected'
-                          ? 'text-red-800'
-                          : notification.type === 'tokens'
-                            ? 'text-orange-800'
-                            : 'text-emerald-800'
-                      }`}>
-                        {notification.title}
-                      </p>
-                      <p className="mt-1 text-sm font-bold leading-6 text-slate-700">
-                        {notification.message}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                        {(notification.teacher_name || notification.teacherName) && (
-                          <span>{notification.teacher_name || notification.teacherName}</span>
-                        )}
-                        {notification.created_at && (
-                          <span>{formatNotificationDate(notification.created_at)}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white">
+          <button
+            type="button"
+            onClick={() => handleMobileTabChange('profile')}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 text-xl font-black text-white transition hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-200"
+            aria-label="Przejdź do profilu"
+          >
             {initial}
-          </span>
+          </button>
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen((isOpen) => !isOpen)}
@@ -1006,8 +1044,8 @@ function StudentHeader({
       </div>
 
       {isMobileMenuOpen && (
-        <div className="border-t border-zinc-100 bg-white px-4 pb-5 pt-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] lg:hidden">
-          <nav className="grid gap-5">
+        <div className="fixed left-0 right-0 top-20 z-[70] h-[calc(100dvh-5rem)] overflow-y-auto border-t border-zinc-100 bg-white px-4 pb-8 pt-5 shadow-[0_18px_40px_rgba(15,23,42,0.12)] lg:hidden">
+          <nav className="mx-auto grid max-w-xl gap-5">
             <SidebarGroup title="Nauka">
               {tabs.map((item) => (
                 <SidebarButton
@@ -1033,9 +1071,9 @@ function StudentHeader({
               <button
                 type="button"
                 onClick={() => setIsLogoutModalOpen(true)}
-                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
+                className="flex items-center gap-4 rounded-lg px-4 py-4 text-left text-base font-black text-slate-600 transition hover:bg-[#f6f2eb] hover:text-[#07463f]"
               >
-                <TabIcon type="logout" className="h-5 w-5 shrink-0" />
+                <TabIcon type="logout" className="h-6 w-6 shrink-0" />
                 Wyloguj się
               </button>
             </SidebarGroup>
@@ -1078,21 +1116,32 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   );
   const rejectedSlot = slots.find((slot) => slot.rejected_student?.id === user?.id);
   const weekDays = getWeekDays(weekStart);
-  const selectedMobileDay = weekDays.find((day) => day.isoDate === selectedMobileDayIso) ?? null;
+  const todayIso = formatIsoDate(new Date());
+  const selectedMobileDay = (
+    weekDays.find((day) => day.isoDate === selectedMobileDayIso)
+    ?? weekDays.find((day) => day.isoDate >= todayIso)
+    ?? weekDays[0]
+  );
+  const mobileMonthDate = parseLocalDate(selectedMobileDay.isoDate);
+  const mobileMonthDays = getMonthCalendarDays(mobileMonthDate);
   const selectedTeacher = teachers.find((teacher) => teacher.id === selectedTeacherId) ?? null;
   const minWeekStart = getWeekStart(addDays(new Date(), -calendarPastDays));
-  const maxWeekStart = getWeekStart(addDays(new Date(), calendarFutureDays));
+  const maxCalendarDate = getEndOfNextMonth();
+  const maxWeekStart = getWeekStart(maxCalendarDate);
   const canGoPrevious = weekStart > minWeekStart;
   const canGoNext = weekStart < maxWeekStart;
+  const canGoNextMonth = new Date(
+    mobileMonthDate.getFullYear(),
+    mobileMonthDate.getMonth() + 1,
+    1,
+    12,
+  ) <= maxCalendarDate;
   const hasTokens = tokens > 0;
   const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) ?? null;
   const preferredTutor = onboardingTutors.find((tutor) => tutor.id === onboardingAnswers?.tutor) ?? null;
   const preferredTeacher = preferredTutor
     ? teachers.find((teacher) => teacher.name.toLowerCase() === preferredTutor.name.toLowerCase()) ?? null
     : null;
-  const displayedTeachers = preferredTeacher
-    ? [preferredTeacher, ...teachers.filter((teacher) => teacher.id !== preferredTeacher.id)]
-    : teachers;
 
   const loadSlots = async () => {
     if (!selectedTeacherId) {
@@ -1357,14 +1406,6 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
     setSlotToCancel(slot);
   };
 
-  const chooseTeacher = (teacherId) => {
-    setSelectedTeacherId(teacherId);
-    setSelectedMobileDayIso(null);
-    setSelectedSlotId(null);
-    setSlotToConfirm(null);
-    setIsLessonScopeRequired(false);
-  };
-
   const confirmBooking = async () => {
     if (!slotToConfirm) {
       return;
@@ -1385,7 +1426,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
 
   return (
     <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <section className="rounded-xl border border-zinc-200 bg-white px-4 py-6 shadow-[0_16px_36px_rgba(15,23,42,0.05)] sm:px-6">
+      <section className="-mx-4 bg-white px-5 py-6 sm:mx-0 sm:rounded-xl sm:border sm:border-zinc-200 sm:px-6 sm:shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
         <div className="grid gap-5 xl:flex xl:items-center xl:justify-between">
           <div>
             <h2 className="text-2xl font-black text-[#07463f]">Kalendarz terminów</h2>
@@ -1393,7 +1434,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
               Wybierz wolny termin i zarezerwuj lekcję.
             </p>
           </div>
-          <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="hidden gap-3 lg:flex lg:flex-wrap lg:items-center">
             <button
               type="button"
               onClick={() => setWeekStart(getWeekStart())}
@@ -1425,44 +1466,6 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-          <p className="text-sm font-bold text-slate-500 sm:mr-1">
-            Wybierz korepetytora:
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:contents">
-            {teachers.map((teacher) => (
-              <button
-                key={teacher.id}
-                type="button"
-                onClick={() => chooseTeacher(teacher.id)}
-                className={`relative flex min-w-0 items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
-                  teacher.id === selectedTeacherId
-                    ? 'border-[#0a604f] bg-[#eef5ee] shadow-[0_10px_24px_rgba(7,70,63,0.1)]'
-                    : 'border-zinc-200 bg-white hover:border-[#b7d5c8]'
-                }`}
-              >
-                {teacher.id === selectedTeacherId && (
-                  <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#007566] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
-                    Wybrany
-                  </span>
-                )}
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0a604f] text-sm font-black text-white">
-                  {teacher.initial}
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-black text-slate-950">{teacher.name}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {teachers.length === 0 && (
-            <p className="rounded-lg bg-white px-4 py-4 text-sm font-bold text-slate-500">
-              Brak dostępnych korepetytorów.
-            </p>
-          )}
-        </div>
-
         {status.message && (
           <p
             className={`mt-5 rounded-md px-4 py-3 text-sm font-bold ${
@@ -1480,14 +1483,71 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
         )}
 
         <div className="mt-7 lg:hidden">
-          {!selectedMobileDay ? (
-            <div className="grid gap-3">
-              {weekDays.map((day) => {
-                const daySlots = hours
-                  .map((hour) => slotMap[slotKey(day.isoDate, hour.padStart(5, '0'))])
-                  .filter(Boolean);
+          <div className="bg-white py-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[1.7rem] font-black leading-tight text-slate-950">
+                  Wybierz datę i godzinę
+                </h3>
+                <div className="mt-7">
+                  <p className="text-xl font-black text-slate-950">
+                    {formatCalendarMonth(mobileMonthDate)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-[4.25rem] flex shrink-0 gap-3">
+                <button
+                  type="button"
+                  disabled={!canGoPrevious}
+                  onClick={() => {
+                    const previousMonth = new Date(mobileMonthDate.getFullYear(), mobileMonthDate.getMonth() - 1, 1, 12);
+                    setWeekStart(getWeekStart(previousMonth));
+                    setSelectedMobileDayIso(formatIsoDate(previousMonth));
+                    setSelectedSlotId(null);
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-2xl font-medium text-slate-800 transition hover:border-[#007566] disabled:cursor-not-allowed disabled:opacity-35"
+                  aria-label="Poprzedni miesiąc"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  disabled={!canGoNextMonth}
+                  onClick={() => {
+                    const nextMonth = new Date(mobileMonthDate.getFullYear(), mobileMonthDate.getMonth() + 1, 1, 12);
+                    setWeekStart(getWeekStart(nextMonth));
+                    setSelectedMobileDayIso(formatIsoDate(nextMonth));
+                    setSelectedSlotId(null);
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-300 bg-white text-2xl font-medium text-slate-800 transition hover:border-[#007566] disabled:cursor-not-allowed disabled:opacity-35"
+                  aria-label="Następny miesiąc"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-8 grid grid-cols-7 gap-x-2 text-center text-base font-semibold text-slate-500">
+              {dayLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+
+            <div className="mt-5 grid grid-cols-7 gap-x-2 gap-y-3">
+              {mobileMonthDays.map((day) => {
+                const isSelected = day.isoDate === selectedMobileDay.isoDate;
+                const isPastDay = day.isoDate < todayIso;
+                const isBeyondMaxDate = day.isoDate > formatIsoDate(maxCalendarDate);
+                const dayDate = parseLocalDate(day.isoDate);
+                const dayWeekStart = getWeekStart(dayDate);
+                const isLoadedWeek = formatIsoDate(dayWeekStart) === formatIsoDate(weekStart);
+                const daySlots = isLoadedWeek
+                  ? hours
+                    .map((hour) => slotMap[slotKey(day.isoDate, hour.padStart(5, '0'))])
+                    .filter(Boolean)
+                  : [];
                 const availableCount = daySlots.filter((slot) => (
-                  slot.status === 'available' && !isPastSlot(slot) && slot.rejected_student?.id !== user?.id
+                  slot.status === 'available' && !isPastSlot(slot) && isSlotBookable(slot) && slot.rejected_student?.id !== user?.id
                 )).length;
                 const ownPendingCount = daySlots.filter((slot) => (
                   slot.status === 'pending' && slot.student?.id === user?.id
@@ -1495,170 +1555,131 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                 const ownBookedCount = daySlots.filter((slot) => (
                   slot.status === 'booked' && slot.student?.id === user?.id
                 )).length;
-                const isPastDay = parseLocalDate(day.isoDate) < parseLocalDate(formatIsoDate(new Date()));
+                const hasOwnReservation = ownPendingCount > 0 || ownBookedCount > 0;
+                const shouldShowAvailability = !isPastDay && !isBeyondMaxDate;
+                const availabilityColor = availableCount >= 5
+                  ? 'bg-[#56ad75]'
+                  : availableCount >= 2
+                    ? 'bg-orange-500'
+                    : 'bg-red-500';
 
                 return (
                   <button
                     key={day.isoDate}
                     type="button"
-                    onClick={() => setSelectedMobileDayIso(day.isoDate)}
-                    className={`rounded-xl border border-zinc-200 px-4 py-3 text-left text-slate-950 shadow-[0_10px_24px_rgba(39,40,45,0.05)] transition hover:border-orange-300 hover:bg-orange-50/40 ${isPastDay ? 'bg-zinc-100' : 'bg-white'}`}
+                    disabled={isBeyondMaxDate}
+                    onClick={() => {
+                      setSelectedMobileDayIso(day.isoDate);
+                      setWeekStart(getWeekStart(dayDate));
+                      setSelectedSlotId(null);
+                    }}
+                    className="mx-auto flex w-full max-w-[3.65rem] flex-col items-center"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-black ${isPastDay ? 'bg-white text-slate-400' : 'bg-[#eef5ee] text-[#07463f]'}`}>
-                          {day.date}
-                        </span>
-                        <div>
-                          <p className={`text-base font-black ${isPastDay ? 'text-slate-400' : 'text-slate-950'}`}>
-                            {day.label}
-                          </p>
-                          <p className="mt-0.5 text-xs font-bold text-slate-400">Kliknij, aby zobaczyć godziny</p>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1 text-[10px] font-black">
-                        <span className="rounded-full bg-orange-50 px-2.5 py-1 text-orange-700">
-                          {availableCount} wolne
-                        </span>
-                        {ownPendingCount > 0 && (
-                          <span className="rounded-full bg-orange-500 px-2.5 py-1 text-white">
-                            {ownPendingCount} oczekuje
-                          </span>
-                        )}
-                        {ownBookedCount > 0 && (
-                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">
-                            {ownBookedCount} zaakcept.
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <span
+                      className={`flex aspect-square w-full items-center justify-center rounded-full border text-base font-medium transition ${
+                        isSelected
+                          ? 'border-[#007566] bg-[#007566] text-white shadow-[0_12px_24px_rgba(0,117,102,0.22)]'
+                          : isPastDay || isBeyondMaxDate
+                            ? 'border-zinc-200 bg-white text-slate-300 line-through'
+                            : hasOwnReservation
+                              ? 'border-orange-200 bg-orange-50 text-orange-700'
+                              : 'border-[#dcebe2] bg-[#eef5ee] text-slate-700 hover:border-[#007566]'
+                      }`}
+                    >
+                      {day.date}
+                    </span>
+                    {shouldShowAvailability && (
+                      <span
+                        className={`mt-1 h-0.5 w-6 rounded-full ${
+                          isSelected
+                            ? 'bg-white'
+                            : hasOwnReservation
+                              ? 'bg-orange-500'
+                              : availabilityColor
+                        }`}
+                      />
+                    )}
                   </button>
                 );
               })}
             </div>
-          ) : (
-            <div>
-              <button
-                type="button"
-                onClick={() => setSelectedMobileDayIso(null)}
-                className="inline-flex items-center gap-2 rounded-md border-2 border-slate-300 px-4 py-2 text-sm font-black text-slate-700 transition hover:border-slate-700"
-              >
-                <span aria-hidden="true">&larr;</span>
-                Daty
-              </button>
 
-              <div className="mt-5 rounded-xl border border-zinc-200 bg-[#f1eee8] px-4 py-4 text-center">
-                <p className="text-xl font-black text-slate-950">{selectedMobileDay.label}</p>
-                <p className="mt-1 text-sm font-bold text-slate-500">{selectedMobileDay.date}</p>
-                <span className="mx-auto mt-2 block h-1.5 w-1.5 rounded-full bg-orange-600" />
-              </div>
+            <div className="mt-8 flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500">
+              <span>Dostępne terminy:</span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1 w-6 rounded-full bg-[#56ad75]" />
+                5+
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1 w-4 rounded-full bg-orange-500" />
+                2-4
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1 w-4 rounded-full bg-red-500" />
+                brak
+              </span>
+            </div>
 
-              <div className="mt-4 grid gap-3">
+            <div className="mt-7 border-t border-zinc-200 pt-6">
+              <div className="grid grid-cols-2 gap-3">
                 {hours.map((hour) => {
                   const startTime = hour.padStart(5, '0');
                   const slot = slotMap[slotKey(selectedMobileDay.isoDate, startTime)];
                   const isRejectedForStudent = slot?.rejected_student?.id === user?.id;
-                  const isAvailable = slot?.status === 'available' && !isPastSlot(slot) && !isRejectedForStudent;
+                  const isAvailableSlot = slot?.status === 'available' && !isPastSlot(slot) && !isRejectedForStudent;
+                  const isBookable = isAvailableSlot && isSlotBookable(slot);
+                  const isTooSoonToBook = isAvailableSlot && !isBookable;
                   const isPendingForStudent = slot?.status === 'pending' && slot.student?.id === user?.id;
                   const isBookedForStudent = slot?.status === 'booked' && slot.student?.id === user?.id;
                   const isPast = isPastSlotTime(selectedMobileDay.isoDate, startTime);
                   const isCompletedForStudent = isPast && (isPendingForStudent || isBookedForStudent);
+                  const canOpenSlot = isBookable || isPendingForStudent || isBookedForStudent || isCompletedForStudent;
 
                   return (
-                    <div
+                    <button
                       key={`${selectedMobileDay.isoDate}-${startTime}`}
-                      className={`rounded-xl border px-4 py-4 ${
-                        isCompletedForStudent
-                          ? 'border-slate-200 bg-slate-100 text-slate-600'
-                          : isAvailable
-                          ? 'border-orange-100 bg-orange-50 text-orange-700'
+                      type="button"
+                      disabled={!canOpenSlot || bookingSlotId === slot?.id || cancelingSlotId === slot?.id || isLoading}
+                      title={
+                        isTooSoonToBook
+                          ? 'Rezerwacja min. 12h wcześniej'
+                          : isRejectedForStudent
+                            ? 'Odrzucono rezerwację'
+                            : undefined
+                      }
+                      onClick={() => {
+                        if (isBookable) {
+                          selectAvailableSlot(slot);
+                        } else if (isPendingForStudent || isBookedForStudent || isCompletedForStudent) {
+                          selectLessonSlot(slot);
+                        }
+                      }}
+                      className={`min-h-12 rounded-full border px-4 py-3 text-center text-base font-black transition disabled:cursor-not-allowed ${
+                        selectedSlotId === slot?.id
+                          ? 'border-[#007566] bg-[#eef5ee] text-[#07463f] shadow-[0_10px_22px_rgba(0,117,102,0.14)]'
                           : isPendingForStudent
-                            ? 'border-orange-500 bg-orange-500 text-white'
+                            ? 'border-orange-300 bg-orange-100 text-orange-800'
                           : isBookedForStudent
-                            ? 'border-emerald-100 bg-emerald-100 text-emerald-800'
-                          : isPast
-                            ? 'border-zinc-200 bg-zinc-100 text-slate-300'
-                            : 'border-zinc-200 bg-white text-slate-400'
+                            ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                          : isBookable
+                            ? 'border-zinc-100 bg-zinc-100 text-slate-950 hover:border-[#007566] hover:bg-[#eef5ee]'
+                          : 'border-zinc-100 bg-zinc-100 text-slate-300'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-lg font-black">
-                            {hour.split(':')[0]}:00-{Number(hour.split(':')[0]) + 1}:00
-                          </p>
-                          <p className={`mt-1 text-xs font-bold ${
-                            isPendingForStudent || isBookedForStudent ? '' : 'text-slate-400'
-                          }`}>
-                            {isAvailable
-                              ? 'Wolny termin'
-                              : isCompletedForStudent
-                                ? 'Zrealizowana'
-                              : isPendingForStudent
-                                ? 'Oczekuje na akceptację'
-                              : isBookedForStudent
-                                ? 'Rezerwacja zaakceptowana'
-                              : isRejectedForStudent
-                                ? 'Odrzucono rezerwację'
-                              : isPast
-                                ? 'Termin minął'
-                              : 'Brak dostępności'}
-                          </p>
-                          {slot?.teacher?.name && (isAvailable || isPendingForStudent || isBookedForStudent) && (
-                            <p className="mt-2 text-sm font-black">
-                              {slot.teacher.name}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {isCompletedForStudent && (
-                        <button
-                          type="button"
-                          onClick={() => selectLessonSlot(slot)}
-                          className="mt-4 w-full rounded-md bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-                        >
-                          {selectedSlotId === slot.id ? 'Wybrano termin' : 'Pokaż szczegóły'}
-                        </button>
-                      )}
-                      {!isCompletedForStudent && isAvailable && (
-                        <button
-                          type="button"
-                          disabled={bookingSlotId === slot?.id || isLoading}
-                          onClick={() => selectAvailableSlot(slot)}
-                          className={`mt-4 w-full rounded-md px-4 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                            selectedSlotId === slot.id
-                              ? 'bg-[#0a604f] text-white hover:bg-[#07463f]'
-                              : 'bg-orange-600 text-white hover:bg-orange-700'
-                          }`}
-                        >
-                          {selectedSlotId === slot.id ? 'Wybrano termin' : 'Wybierz termin'}
-                        </button>
-                      )}
-                      {!isCompletedForStudent && isPendingForStudent && (
-                        <button
-                          type="button"
-                          disabled={cancelingSlotId === slot?.id || isLoading}
-                          onClick={() => selectLessonSlot(slot)}
-                          className="mt-4 w-full rounded-md bg-white px-4 py-2.5 text-sm font-black text-orange-700 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {selectedSlotId === slot.id ? 'Wybrano termin' : 'Pokaż szczegóły'}
-                        </button>
-                      )}
-                      {!isCompletedForStudent && isBookedForStudent && (
-                        <button
-                          type="button"
-                          onClick={() => selectLessonSlot(slot)}
-                          className="mt-4 w-full rounded-md bg-white px-4 py-2.5 text-sm font-black text-emerald-800 transition hover:bg-emerald-50"
-                        >
-                          {selectedSlotId === slot.id ? 'Wybrano termin' : 'Pokaż spotkanie'}
-                        </button>
-                      )}
-                    </div>
+                      {bookingSlotId === slot?.id
+                        ? 'Rezerwuję...'
+                        : cancelingSlotId === slot?.id
+                          ? 'Anuluję...'
+                          : startTime}
+                    </button>
                   );
                 })}
               </div>
+              <p className="mt-3 text-xs font-bold text-slate-400">
+                Terminy można rezerwować najpóźniej 12 godzin przed startem.
+              </p>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="mt-7 hidden overflow-x-auto lg:block">
@@ -1687,7 +1708,9 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                   const startTime = hour.padStart(5, '0');
                   const slot = slotMap[slotKey(day.isoDate, startTime)];
                   const isRejectedForStudent = slot?.rejected_student?.id === user?.id;
-                  const isAvailable = slot?.status === 'available' && !isPastSlot(slot) && !isRejectedForStudent;
+                  const isAvailableSlot = slot?.status === 'available' && !isPastSlot(slot) && !isRejectedForStudent;
+                  const isBookable = isAvailableSlot && isSlotBookable(slot);
+                  const isTooSoonToBook = isAvailableSlot && !isBookable;
                   const isPendingForStudent = slot?.status === 'pending' && slot.student?.id === user?.id;
                   const isBookedForStudent = slot?.status === 'booked' && slot.student?.id === user?.id;
                   const isPast = isPastSlotTime(day.isoDate, startTime);
@@ -1697,10 +1720,12 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                     <button
                       key={`${day.isoDate}-${startTime}`}
                       type="button"
-                      disabled={(!isAvailable && !isPendingForStudent && !isBookedForStudent) || bookingSlotId === slot?.id || cancelingSlotId === slot?.id || isLoading}
+                      disabled={(!isBookable && !isPendingForStudent && !isBookedForStudent) || bookingSlotId === slot?.id || cancelingSlotId === slot?.id || isLoading}
                       title={
                         isCompletedForStudent
                           ? 'Lekcja zrealizowana'
+                          : isTooSoonToBook
+                            ? 'Rezerwacja min. 12h wcześniej'
                           : isPendingForStudent
                           ? 'Oczekiwanie na akceptację przez korepetytora'
                           : isBookedForStudent
@@ -1708,7 +1733,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                             : undefined
                       }
                       onClick={() => {
-                        if (isAvailable) {
+                        if (isBookable) {
                           selectAvailableSlot(slot);
                         } else if (isPendingForStudent) {
                           selectLessonSlot(slot);
@@ -1721,7 +1746,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                           ? selectedSlotId === slot.id
                             ? 'bg-slate-600 text-white ring-2 ring-inset ring-slate-800'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          : isAvailable
+                          : isBookable
                           ? selectedSlotId === slot.id
                             ? 'bg-[#0a604f] text-white ring-2 ring-inset ring-[#07463f]'
                             : 'bg-[#e8f1ea] text-[#0a604f] hover:bg-[#dcebe2]'
@@ -1738,7 +1763,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
                             : 'bg-white text-transparent'
                       } disabled:cursor-not-allowed`}
                     >
-                      {isAvailable || isPendingForStudent || isBookedForStudent ? (
+                      {isBookable || isPendingForStudent || isBookedForStudent ? (
                         bookingSlotId === slot.id
                           ? 'Rezerwuję...'
                           : cancelingSlotId === slot.id
@@ -1773,7 +1798,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
             isScopeRequired={isLessonScopeRequired}
             isBooking={bookingSlotId === selectedSlot.id}
             isCanceling={cancelingSlotId === selectedSlot.id}
-            canReserve={selectedSlot.status === 'available' && !isPastSlot(selectedSlot)}
+            canReserve={selectedSlot.status === 'available' && !isPastSlot(selectedSlot) && isSlotBookable(selectedSlot)}
             canCancel={(
               selectedSlot.status === 'pending'
               || (selectedSlot.status === 'booked' && selectedSlot.can_cancel)
@@ -1958,6 +1983,108 @@ function NoTokensModal({ onClose }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function NotificationsPanel({ notifications }) {
+  const sortedNotifications = [...notifications].sort((first, second) => (
+    new Date(second.created_at).getTime() - new Date(first.created_at).getTime()
+  ));
+
+  const getNotificationStyle = (type) => {
+    if (type === 'rejected') {
+      return {
+        icon: 'calendar',
+        card: 'border-red-100 bg-red-50',
+        iconBox: 'bg-red-100 text-red-700',
+        title: 'text-red-800',
+      };
+    }
+
+    if (type === 'tokens') {
+      return {
+        icon: 'tokens',
+        card: 'border-orange-100 bg-orange-50',
+        iconBox: 'bg-orange-100 text-orange-700',
+        title: 'text-orange-800',
+      };
+    }
+
+    return {
+      icon: 'calendar',
+      card: 'border-emerald-100 bg-emerald-50',
+      iconBox: 'bg-emerald-100 text-emerald-700',
+      title: 'text-emerald-800',
+    };
+  };
+
+  return (
+    <section className="rounded-xl border border-zinc-200 bg-white px-5 py-6 shadow-[0_16px_36px_rgba(15,23,42,0.05)] sm:px-8">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007566]">
+          Historia
+        </p>
+        <h2 className="mt-2 text-3xl font-black text-[#07463f]">
+          Powiadomienia
+        </h2>
+        <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
+          Sprawdzisz tutaj potwierdzenia lekcji, odrzucone rezerwacje i dodane żetony.
+        </p>
+      </div>
+
+      <div className="mt-7 grid gap-4">
+        {sortedNotifications.length === 0 ? (
+          <div className="rounded-lg border border-zinc-200 bg-[#fbfaf7] px-4 py-5 text-sm font-bold leading-6 text-slate-500">
+            Nie masz jeszcze powiadomień.
+          </div>
+        ) : (
+          sortedNotifications.map((notification) => {
+            const style = getNotificationStyle(notification.type);
+
+            return (
+              <article
+                key={notification.id}
+                className={`rounded-xl border px-4 py-4 ${style.card}`}
+              >
+                <div className="flex gap-4">
+                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${style.iconBox}`}>
+                    <TabIcon type={style.icon} className="h-6 w-6" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <h3 className={`text-base font-black ${style.title}`}>
+                        {notification.title}
+                      </h3>
+                      {notification.created_at && (
+                        <span className="shrink-0 text-xs font-black uppercase tracking-wide text-slate-400">
+                          {formatNotificationDate(notification.created_at)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
+                      {notification.message}
+                    </p>
+                    {(notification.teacher_name || notification.lesson_date) && (
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-black uppercase tracking-wide text-slate-400">
+                        {notification.teacher_name && (
+                          <span>{notification.teacher_name}</span>
+                        )}
+                        {notification.lesson_date && (
+                          <span>
+                            {formatSlotDate(notification.lesson_date)}
+                            {notification.start_time ? `, ${notification.start_time}` : ''}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -2619,14 +2746,6 @@ function StudentTutorProfileCard({ tutor, isMobileExpanded, onToggleMobile, onOp
             ))}
           </ul>
 
-          <div className="mt-8 flex flex-wrap gap-x-9 gap-y-5">
-            {tutor.tags.map((tag) => (
-              <span key={tag} className="text-base font-extrabold text-[#0a604f]">
-                {tag}
-              </span>
-            ))}
-          </div>
-
           <button
             type="button"
             onClick={onOpenChat}
@@ -2791,7 +2910,7 @@ function StudentPricingCard({ item, onChoose }) {
 function PackageContactModal({ user, onboardingAnswers, group, plan, onClose }) {
   const studentName = user?.full_name || user?.email || 'Uczeń';
   const selectedTutor = onboardingTutors.find((item) => item.id === onboardingAnswers?.tutor);
-  const selectedFormat = tutoringFormats.find((item) => item.id === onboardingAnswers?.format);
+  const selectedFormat = tutoringFormats.find((item) => item.id === onboardingAnswers?.format) ?? tutoringFormats[0];
   const studentPhone = onboardingAnswers?.phone?.trim();
   const bodyLines = [
     'Dzień dobry,',
@@ -3001,7 +3120,7 @@ function ProfilePanel({ user, showOnboarding = false, forceNameStep = false, onO
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const selectedSubject = onboardingSubjects.find((item) => item.id === onboardingAnswers?.subject);
-  const selectedFormat = tutoringFormats.find((item) => item.id === onboardingAnswers?.format);
+  const selectedFormat = tutoringFormats.find((item) => item.id === onboardingAnswers?.format) ?? tutoringFormats[0];
   const selectedTutor = onboardingTutors.find((item) => item.id === onboardingAnswers?.tutor);
   const contactPhone = onboardingAnswers?.phone?.trim() || 'Jeszcze nie dodany';
 
@@ -3218,7 +3337,7 @@ function OnboardingSurvey({ user, forceNameStep, initialAnswers, onComplete }) {
   const [form, setForm] = useState({
     fullName: initialAnswers?.fullName || (hasKnownName ? user.full_name : ''),
     subject: initialAnswers?.subject || '',
-    format: initialAnswers?.format || '',
+    format: initialAnswers?.format === 'krakow' ? 'online' : initialAnswers?.format || 'online',
     tutor: initialAnswers?.tutor || '',
     phone: initialAnswers?.phone || '',
   });
@@ -3569,13 +3688,6 @@ function TutorChoiceGrid({ title, options, selected, onChoose }) {
                     <span key={bullet} className="flex gap-3 text-sm font-semibold leading-6 text-slate-600">
                       <span className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[#0a604f]" />
                       <span>{bullet}</span>
-                    </span>
-                  ))}
-                </span>
-                <span className="mt-6 flex flex-wrap gap-x-6 gap-y-3">
-                  {tutor.tags.map((tag) => (
-                    <span key={tag} className="text-sm font-extrabold text-[#0a604f]">
-                      {tag}
                     </span>
                   ))}
                 </span>

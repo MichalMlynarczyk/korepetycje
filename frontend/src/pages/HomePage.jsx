@@ -5,6 +5,8 @@ import heroStudentImage from '../../images/ChatGPT Image 2 lip 2026, 22_32_26.pn
 import contactImage from '../../images/kontakt.png';
 
 const MESSENGER_CHAT_URL = 'https://www.facebook.com/profile.php?id=61591144089900&mibextid=wwXIfr&rdid=LMErxcEybUPiCe0v&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F191Mh71ZZi%2F%3Fmibextid%3DwwXIfr#';
+const CONTACT_PHONE_DISPLAY = '+48 000 000 000';
+const CONTACT_PHONE_HREF = '+48000000000';
 
 function openRegisterModal() {
   window.dispatchEvent(
@@ -320,7 +322,8 @@ export function HomePage() {
 
   useEffect(() => {
     const handleOpenContact = (event) => {
-      setContactModalMode(event.detail?.mode === 'messenger' ? 'messenger' : 'email');
+      const nextMode = ['messenger', 'level'].includes(event.detail?.mode) ? event.detail.mode : 'email';
+      setContactModalMode(nextMode);
       setIsContactModalOpen(true);
     };
 
@@ -2391,14 +2394,6 @@ function TutorProfileCard({ tutor, isExpanded, isMobileExpanded, onToggleMobile 
             ))}
           </ul>
 
-          <div className="mt-8 flex flex-wrap gap-x-9 gap-y-5">
-            {tutor.tags.map((tag) => (
-              <span key={tag} className="text-base font-extrabold text-[#0a604f]">
-                {tag}
-              </span>
-            ))}
-          </div>
-
           <button
             type="button"
             onClick={() => openContactModal()}
@@ -2625,7 +2620,7 @@ function ProgramSection() {
           </div>
           <button
             type="button"
-            onClick={openContactModal}
+            onClick={() => openContactModal('level')}
             className="inline-flex items-center justify-center gap-3 rounded-lg bg-[#007566] px-6 py-3 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.18)] transition hover:bg-[#005d51]"
           >
             <ChatBubblesIcon className="h-5 w-5" />
@@ -2777,6 +2772,7 @@ function Contact(){
 
 function ContactModal({ mode = 'email', onClose }) {
   const isMessengerMode = mode === 'messenger';
+  const isLevelContactMode = mode === 'level';
   const contactEmail = 'support.nastomatma@gmail.com';
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState({ type: null, message: '' });
@@ -2887,13 +2883,51 @@ function ContactModal({ mode = 'email', onClose }) {
                 Skontaktuj się
               </h2>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                {isMessengerMode
+                {isLevelContactMode
+                  ? 'Zadzwoń albo napisz do nas, a pomożemy dobrać odpowiedni poziom.'
+                  : isMessengerMode
                   ? 'Napisz do nas bezpośrednio na Messengerze albo zaloguj się, żeby zobaczyć numer.'
                   : 'Opisz krótko, z czym możemy pomóc.'}
               </p>
             </div>
 
-            {isMessengerMode ? (
+            {isLevelContactMode ? (
+              <div className="mt-6 space-y-4">
+                <a
+                  href={`tel:${CONTACT_PHONE_HREF}`}
+                  className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-extrabold text-[#07463f] transition hover:border-[#b7d5c8] hover:bg-[#eff8f5]"
+                >
+                  <span className="flex items-center gap-3">
+                    <PhoneChatIcon className="h-5 w-5 shrink-0 text-[#007566]" />
+                    Numer telefonu
+                  </span>
+                  <span>{CONTACT_PHONE_DISPLAY}</span>
+                </a>
+
+                <a
+                  href={MESSENGER_CHAT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md bg-[#007566] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,117,102,0.2)] transition hover:bg-[#005d51]"
+                >
+                  Skontaktuj się
+                  <ArrowRightIcon className="h-5 w-5" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => openContactModal('email')}
+                  className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md border-2 border-[#007566] bg-white px-5 text-sm font-extrabold text-[#07463f] transition hover:bg-[#eff8f5]"
+                >
+                  Wiadomość e-mail
+                  <MailIcon className="h-5 w-5" />
+                </button>
+
+                <p className="rounded-md bg-[#eff8f5] px-4 py-3 text-sm font-bold leading-6 text-[#07463f]">
+                  Messenger otworzy się w nowej karcie, a wiadomość e-mail możesz wysłać tutaj.
+                </p>
+              </div>
+            ) : isMessengerMode ? (
               <div className="mt-6 space-y-4">
                 <div>
                   <label className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-400">
@@ -2902,7 +2936,7 @@ function ContactModal({ mode = 'email', onClose }) {
                   <div className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                     <span className="flex items-center gap-3 text-sm font-extrabold text-[#07463f]">
                       <PhoneChatIcon className="h-5 w-5 shrink-0 text-[#007566]" />
-                      <span className="select-none blur-[3px]">+48 000 000 000</span>
+                      <span className="select-none blur-[3px]">{CONTACT_PHONE_DISPLAY}</span>
                     </span>
                     <span className="rounded-full bg-[#e8f1ea] px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#007566]">
                       ukryty

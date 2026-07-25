@@ -54,7 +54,6 @@ DEFAULT_SLOT_KEYS = {
 CALENDAR_WEEK_START = date(2026, 6, 15)
 CALENDAR_START_HOUR = 9
 CALENDAR_PAST_DAYS = 14
-CALENDAR_FUTURE_DAYS = 28
 TEACHER_USERNAMES = ['KubaCRF_876_@gmail.com', 'HubertCRH_987_@gmail.com']
 ALLOWED_MATERIAL_CONTENT_TYPES = {
     'application/pdf': '.pdf',
@@ -351,18 +350,8 @@ def _booked_cancellation_info(slot):
             'cancel_message': 'Lekcja została już zrealizowana.',
         }
 
-    confirmed_at = timezone.localtime(slot.confirmed_at or slot.updated_at)
-    hours_to_start = (slot_start - now).total_seconds() / 3600
-
-    if hours_to_start < 24:
-        cancel_deadline = confirmed_at + timedelta(hours=1)
-        cancel_message = 'Lekcję można anulować przez 1 godzinę od potwierdzenia.'
-    elif hours_to_start <= 48:
-        cancel_deadline = confirmed_at + timedelta(hours=4)
-        cancel_message = 'Lekcję można anulować przez 4 godziny od potwierdzenia.'
-    else:
-        cancel_deadline = slot_start - timedelta(hours=24)
-        cancel_message = 'Lekcję można anulować do 24 godzin przed rozpoczęciem.'
+    cancel_deadline = slot_start - timedelta(hours=24)
+    cancel_message = 'Potwierdzoną lekcję można anulować do 24 godzin przed rozpoczęciem.'
 
     return {
         'can_cancel': now < cancel_deadline,
@@ -498,7 +487,10 @@ def _calendar_min_date():
 
 
 def _calendar_max_date():
-    return _today() + timedelta(days=CALENDAR_FUTURE_DAYS)
+    today = _today()
+    next_month = today.replace(day=28) + timedelta(days=4)
+    month_after_next = next_month.replace(day=28) + timedelta(days=4)
+    return month_after_next.replace(day=1) - timedelta(days=1)
 
 
 def _cleanup_old_slots():
@@ -527,7 +519,15 @@ def _is_slot_in_allowed_window(slot_date, start_time):
         return False, 'Nie można zmieniać ani rezerwować terminów z przeszłości.'
 
     if slot_date > _calendar_max_date():
-        return False, 'Terminy można planować maksymalnie 4 tygodnie do przodu.'
+        return False, 'Terminy można planować maksymalnie do końca kolejnego miesiąca.'
+
+    return True, None
+
+
+def _is_student_booking_allowed(slot):
+    slot_start = _slot_start_datetime(slot)
+    if slot_start - timezone.localtime() < timedelta(hours=12):
+        return False, 'Korepetycje można zarezerwować najpóźniej 12 godzin przed rozpoczęciem.'
 
     return True, None
 
@@ -591,7 +591,10 @@ def calendar_slots(request):
     if error:
         return error
 
-    week_end = week_start + timedelta(days=6)
+    max_date = _calendar_max_date()
+    week_end = min(week_start + timedelta(days=6), max_date)
+    if week_start > max_date:
+        return JsonResponse({'error': 'Kalendarz jest dostępny maksymalnie do końca kolejnego miesiąca.'}, status=400)
     teacher = request.user if _is_teacher(request.user) else None
     if not teacher:
         teacher_id = request.GET.get('teacher_id')
@@ -611,7 +614,7 @@ def calendar_slots(request):
         'window': {
             'week_start': week_start.isoformat(),
             'min_date': _calendar_min_date().isoformat(),
-            'max_date': _calendar_max_date().isoformat(),
+            'max_date': max_date.isoformat(),
         },
     }
     if not _is_teacher(request.user):
@@ -1173,6 +1176,9 @@ def calendar_book_slot(request):
             return JsonResponse({'error': 'Ten termin jest już zarezerwowany.'}, status=409)
 
         is_allowed, message = _is_slot_in_allowed_window(slot.date, slot.start_time)
+        if not is_allowed:
+            return JsonResponse({'error': message}, status=400)
+        is_allowed, message = _is_student_booking_allowed(slot)
         if not is_allowed:
             return JsonResponse({'error': message}, status=400)
 
