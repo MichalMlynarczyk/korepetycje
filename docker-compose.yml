@@ -42,8 +42,8 @@ services:
       DJANGO_DEBUG: "True"
       DJANGO_SECRET_KEY: dev-docker-change-me
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,45.93.139.211,nastomatma.pl,www.nastomatma.pl
-      FRONTEND_URL: ${FRONTEND_URL:-http://45.93.139.211}
-      WAGTAILADMIN_BASE_URL: ${WAGTAILADMIN_BASE_URL:-http://45.93.139.211}
+      FRONTEND_URL: ${FRONTEND_URL:-https://nastomatma.pl}
+      WAGTAILADMIN_BASE_URL: ${WAGTAILADMIN_BASE_URL:-https://nastomatma.pl}
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
       FACEBOOK_OAUTH_CLIENT_ID: ${FACEBOOK_OAUTH_CLIENT_ID:-}
