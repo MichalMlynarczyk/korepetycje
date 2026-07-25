@@ -12,6 +12,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='auth-logout'),
     path('account/', views.account_delete, name='account-delete'),
     path('contact/', views.contact_message, name='contact-message'),
+    path('free-lesson/', views.free_lesson_lead, name='free-lesson-lead'),
     path('onboarding/', views.onboarding_answers, name='onboarding-answers'),
     path('package-contact/', views.package_contact_message, name='package-contact-message'),
     path('calendar/', views.calendar_slots, name='calendar-slots'),

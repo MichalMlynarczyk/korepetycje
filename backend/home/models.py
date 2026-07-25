@@ -23,6 +23,25 @@ class StudentProfile(models.Model):
         return self.full_name
 
 
+class FreeLessonLead(models.Model):
+    parent_full_name = models.CharField(max_length=160)
+    student_full_name = models.CharField(max_length=160)
+    email = models.EmailField()
+    phone = models.CharField(max_length=32)
+    school_class = models.CharField(max_length=80)
+    source_path = models.CharField(max_length=180, blank=True)
+    user_agent = models.TextField(blank=True)
+    notification_sent_at = models.DateTimeField(null=True, blank=True)
+    notification_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.student_full_name} - {self.parent_full_name}'
+
+
 class LessonSlot(models.Model):
     STATUS_AVAILABLE = 'available'
     STATUS_PENDING = 'pending'

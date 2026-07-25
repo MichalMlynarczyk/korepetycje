@@ -8,7 +8,9 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.mail import BadHeaderError, send_mail
+from django.core.validators import validate_email
 from django.db import models, transaction
 from django.http import FileResponse, HttpResponseRedirect, JsonResponse
 from django.middleware.csrf import get_token
@@ -20,7 +22,15 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from .models import ChatMessage, ChatReadState, LessonSlot, StudentMaterial, StudentNotification, StudentProfile
+from .models import (
+    ChatMessage,
+    ChatReadState,
+    FreeLessonLead,
+    LessonSlot,
+    StudentMaterial,
+    StudentNotification,
+    StudentProfile,
+)
 
 
 DEFAULT_SLOT_KEYS = {
@@ -52,6 +62,7 @@ ALLOWED_MATERIAL_CONTENT_TYPES = {
     'image/jpeg': '.jpg',
 }
 MAX_MATERIAL_SIZE = 15 * 1024 * 1024
+FREE_LESSON_DEADLINE = date(2026, 8, 14)
 
 
 def _json_body(request):
@@ -189,6 +200,30 @@ def _send_new_student_notification_email(user, profile):
         message=message,
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[settings.NEW_STUDENT_EMAIL],
+        fail_silently=False,
+    )
+
+
+def _send_free_lesson_lead_email(lead):
+    local_created_at = timezone.localtime(lead.created_at)
+    message = (
+        'Nowe zgłoszenie z kuponu QR na darmową lekcję NaSTOmatMa.\n\n'
+        'Oferta: darmowa lekcja do 40 minut, ważna do 14.08.2026.\n\n'
+        f'ID zgłoszenia: {lead.id}\n'
+        f'Data zgłoszenia: {local_created_at:%d.%m.%Y %H:%M}\n'
+        f'Imię i nazwisko rodzica: {lead.parent_full_name}\n'
+        f'Imię i nazwisko dziecka: {lead.student_full_name}\n'
+        f'Klasa: {lead.school_class}\n'
+        f'E-mail: {lead.email}\n'
+        f'Telefon: {lead.phone}\n'
+        f'Źródło: {lead.source_path or "Brak"}\n'
+    )
+
+    send_mail(
+        subject='Darmowa lekcja - nowe zgłoszenie',
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[settings.FREE_LESSON_EMAIL],
         fail_silently=False,
     )
 
@@ -1308,6 +1343,66 @@ def package_contact_message(request):
             'email': teacher.email,
         },
     })
+
+
+@csrf_exempt
+@require_POST
+def free_lesson_lead(request):
+    if timezone.localdate() > FREE_LESSON_DEADLINE:
+        return JsonResponse({'error': 'Promocja darmowej lekcji była ważna do 14.08.2026.'}, status=400)
+
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
+
+    parent_full_name = str(data.get('parent_full_name', '')).strip()
+    student_full_name = str(data.get('student_full_name', '')).strip()
+    email = str(data.get('email', '')).strip().lower()
+    phone = str(data.get('phone', '')).strip()
+    school_class = str(data.get('school_class', '')).strip()
+    source_path = str(data.get('source_path', '')).strip()[:180]
+
+    if not parent_full_name:
+        return JsonResponse({'error': 'Podaj imię i nazwisko rodzica.'}, status=400)
+    if not student_full_name:
+        return JsonResponse({'error': 'Podaj imię i nazwisko dziecka.'}, status=400)
+    if not email:
+        return JsonResponse({'error': 'Podaj adres e-mail.'}, status=400)
+    try:
+        validate_email(email)
+    except ValidationError:
+        return JsonResponse({'error': 'Podaj poprawny adres e-mail.'}, status=400)
+    if not phone:
+        return JsonResponse({'error': 'Podaj numer telefonu.'}, status=400)
+    if len(phone) > 32:
+        return JsonResponse({'error': 'Numer telefonu jest za długi.'}, status=400)
+    if not school_class:
+        return JsonResponse({'error': 'Wybierz klasę.'}, status=400)
+
+    lead = FreeLessonLead.objects.create(
+        parent_full_name=parent_full_name,
+        student_full_name=student_full_name,
+        email=email,
+        phone=phone,
+        school_class=school_class,
+        source_path=source_path,
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:1000],
+    )
+
+    try:
+        _send_free_lesson_lead_email(lead)
+    except (BadHeaderError, OSError, SMTPException) as exc:
+        lead.notification_error = str(exc)[:2000]
+        lead.save(update_fields=['notification_error'])
+    else:
+        lead.notification_sent_at = timezone.now()
+        lead.notification_error = ''
+        lead.save(update_fields=['notification_sent_at', 'notification_error'])
+
+    return JsonResponse({
+        'detail': 'Zgłoszenie zostało zapisane. Skontaktujemy się z Tobą, aby ustalić termin.',
+        'lead_id': lead.id,
+    }, status=201)
 
 
 @csrf_exempt

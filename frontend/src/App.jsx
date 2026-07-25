@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Footer } from './sections/Footer.jsx';
 import { Header } from './sections/Header.jsx';
 import { HomePage } from './pages/HomePage.jsx';
+import { FreeLessonPage } from './pages/FreeLessonPage.jsx';
 import { StudentPage } from './pages/StudentPage.jsx';
 import { TeacherPage } from './pages/TeacherPage.jsx';
 import { API_BASE_URL } from './api.js';
@@ -19,6 +20,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [forceOnboardingUserId, setForceOnboardingUserId] = useState(null);
+  const isFreeLessonPage = window.location.pathname === '/darmowalekcja';
 
   useEffect(() => {
     let isMounted = true;
@@ -86,9 +88,11 @@ function App() {
 
   return (
     <>
-      {!currentUser && <Header onAuthSuccess={handleAuthSuccess} />}
+      {!currentUser && !isFreeLessonPage && <Header onAuthSuccess={handleAuthSuccess} />}
       <main className="min-h-screen bg-white text-slate-950">
-        {currentUser?.role === 'teacher' ? (
+        {isFreeLessonPage ? (
+          <FreeLessonPage />
+        ) : currentUser?.role === 'teacher' ? (
           <TeacherPage user={currentUser} onLogout={handleLogout} />
         ) : currentUser ? (
           <StudentPage
