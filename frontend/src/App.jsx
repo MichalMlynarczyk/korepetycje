@@ -7,6 +7,9 @@ import { StudentPage } from './pages/StudentPage.jsx';
 import { TeacherPage } from './pages/TeacherPage.jsx';
 import { API_BASE_URL } from './api.js';
 
+const FREE_LESSON_INTENT_KEY = 'nastomatma:free-lesson-intent';
+const FREE_LESSON_PATH = '/darmowalekcja';
+
 async function getCsrfToken() {
   const response = await fetch(`${API_BASE_URL}/api/auth/csrf/`, {
     credentials: 'include',
@@ -20,7 +23,13 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [forceOnboardingUserId, setForceOnboardingUserId] = useState(null);
-  const isFreeLessonPage = window.location.pathname === '/darmowalekcja';
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const isFreeLessonPage = currentPath === FREE_LESSON_PATH;
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -50,6 +59,35 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isFreeLessonPage && !currentUser && typeof window !== 'undefined') {
+      window.localStorage.setItem(FREE_LESSON_INTENT_KEY, 'pending');
+    }
+  }, [currentUser, isFreeLessonPage]);
+
+  useEffect(() => {
+    if (!currentUser || isFreeLessonPage || typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.localStorage.getItem(FREE_LESSON_INTENT_KEY) === 'pending') {
+      setForceOnboardingUserId(null);
+      navigateTo(FREE_LESSON_PATH);
+    }
+  }, [currentUser, isFreeLessonPage]);
+
   const handleLogout = async () => {
     const csrfToken = await getCsrfToken();
 
@@ -68,6 +106,12 @@ function App() {
   const handleAuthSuccess = (user, context = {}) => {
     setCurrentUser(user);
 
+    if (typeof window !== 'undefined' && window.localStorage.getItem(FREE_LESSON_INTENT_KEY) === 'pending') {
+      setForceOnboardingUserId(null);
+      navigateTo(FREE_LESSON_PATH);
+      return;
+    }
+
     if (context.isRegister) {
       setForceOnboardingUserId(user.id);
     }
@@ -79,9 +123,12 @@ function App() {
   };
 
   const handleFreeLessonComplete = (user) => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(FREE_LESSON_INTENT_KEY);
+    }
     setCurrentUser(user);
     setForceOnboardingUserId(null);
-    window.history.pushState({}, '', '/');
+    navigateTo('/');
   };
 
   if (!isAuthChecked) {
