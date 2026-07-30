@@ -1462,7 +1462,8 @@ def free_lesson_lead(request):
         if not profile:
             return JsonResponse({'error': 'Nie znaleziono profilu ucznia.'}, status=404)
 
-        token_was_granted = not FreeLessonLead.objects.filter(email=email).exists()
+        onboarding_answers = profile.onboarding_answers if isinstance(profile.onboarding_answers, dict) else {}
+        token_was_granted = not onboarding_answers.get('freeLessonTokenGranted')
         lead = FreeLessonLead.objects.create(
             parent_full_name=parent_full_name,
             student_full_name=student_full_name,
@@ -1475,7 +1476,11 @@ def free_lesson_lead(request):
 
         if token_was_granted:
             profile.tokens += 1
-            profile.save(update_fields=['tokens', 'updated_at'])
+            profile.onboarding_answers = {
+                **onboarding_answers,
+                'freeLessonTokenGranted': 'true',
+            }
+            profile.save(update_fields=['tokens', 'onboarding_answers', 'updated_at'])
             _create_tokens_notification(request.user, 1, profile.tokens)
 
     try:
@@ -1496,7 +1501,11 @@ def free_lesson_lead(request):
         ),
         'lead_id': lead.id,
         'tokens': profile.tokens,
-        'user': _user_payload(request.user),
+        'user': {
+            **_user_payload(request.user),
+            'tokens': profile.tokens,
+            'onboarding_answers': profile.onboarding_answers,
+        },
     }, status=201)
 
 
