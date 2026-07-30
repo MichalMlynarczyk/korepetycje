@@ -252,7 +252,7 @@ export function Header({ onAuthSuccess }) {
   );
 }
 
-function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess, initialStatus }) {
+export function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess, initialStatus, canClose = true }) {
   const isRegister = mode === 'register';
   const [formData, setFormData] = useState({
     full_name: '',
@@ -346,20 +346,22 @@ function AuthModal({ mode, onClose, onSwitchMode, onAuthSuccess, initialStatus }
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-title"
-      onMouseDown={onClose}
+      onMouseDown={canClose ? onClose : undefined}
     >
       <div
         className="relative my-auto grid w-full max-w-5xl overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)] lg:grid-cols-[1.08fr_0.92fr]"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.12)] transition hover:bg-orange-50 hover:text-orange-600"
-          aria-label="Zamknij panel"
-        >
-          <CloseIcon className="h-5 w-5" />
-        </button>
+        {canClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.12)] transition hover:bg-orange-50 hover:text-orange-600"
+            aria-label="Zamknij panel"
+          >
+            <CloseIcon className="h-5 w-5" />
+          </button>
+        )}
 
         <div className="relative hidden min-h-[34rem] lg:block">
           <img src={authPanelImage} alt="" className="h-full w-full object-cover" />

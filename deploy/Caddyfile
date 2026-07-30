@@ -1,9 +1,26 @@
-nastomatma.pl, www.nastomatma.pl, localhost, 127.0.0.1, http://45.93.139.211 {
+{$CADDY_SITE_ADDRESS} {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    handle_path /media/* {
+        root * /srv/media
+        file_server
+    }
+
+    handle_path /static/* {
+        root * /srv/static
+        file_server
+    }
+
     reverse_proxy /api/* backend:8000
     reverse_proxy /accounts/* backend:8000
     reverse_proxy /admin/* backend:8000
-    reverse_proxy /media/* backend:8000
-    reverse_proxy /static/* backend:8000
 
     reverse_proxy frontend:5173
 }

@@ -43,21 +43,18 @@ docker compose up --build
 
 Serwisy:
 
-- Publiczny adres przez Caddy: `http://45.93.139.211`
-- Frontend lokalnie: `http://localhost:5173`
-- Backend lokalnie: `http://localhost:8001`
-- PostgreSQL lokalnie: `localhost:55432`
+- Publiczny adres przez Caddy: `https://nastomatma.pl`
+- Frontend: dostepny tylko wewnatrz sieci Docker dla Caddy
+- Backend: dostepny tylko wewnatrz sieci Docker dla Caddy
+- PostgreSQL: dostepny tylko wewnatrz prywatnej sieci Docker dla backendu
 
 Mapowanie portow Docker Compose:
 
 - Caddy: `0.0.0.0:80->80`, `0.0.0.0:443->443`
-- Backend: `127.0.0.1:8001->8000`
-- Frontend: `127.0.0.1:5173->5173`
-- PostgreSQL: `127.0.0.1:55432->5432`
+- Backend, frontend i PostgreSQL nie publikuja portow na hosta
 
-Backend przy starcie wykonuje migracje i tworzy konto nauczyciela:
+Przed uruchomieniem produkcyjnym ustaw wymagane sekrety w `.env`. Szablon znajduje sie w `.env.example`.
 
-- login: `kuba@admin.com`
-- haslo: `admin123`
+Backend przy starcie wykonuje migracje, synchronizuje aplikacje OAuth i zbiera pliki statyczne.
 
 Baza danych jest trzymana w wolumenie `postgres_data`, a media backendu w `backend_media`.

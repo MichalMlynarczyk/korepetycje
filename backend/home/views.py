@@ -397,6 +397,7 @@ def _slot_payload(slot):
         'status': slot.status,
         'confirmed_at': timezone.localtime(slot.confirmed_at).isoformat() if slot.confirmed_at else None,
         'lesson_scope': _lesson_scope_for_slot(slot),
+        'teacher_comment': slot.teacher_comment,
         **cancellation_info,
         'teacher': {
             'id': slot.teacher_id,
@@ -452,10 +453,28 @@ def _create_tokens_notification(student, amount, tokens):
     )
 
 
+def _create_lesson_comment_notification(student, slot):
+    if not student or not slot.teacher_comment.strip():
+        return None
+
+    return StudentNotification.objects.create(
+        student=student,
+        lesson_slot=slot,
+        kind=StudentNotification.KIND_LESSON_COMMENT,
+        title='Dodano komentarz do spotkania',
+        message=slot.teacher_comment.strip(),
+        teacher_name=_display_name(slot.teacher),
+        lesson_date=slot.date,
+        start_time=slot.start_time,
+        end_time=slot.end_time,
+    )
+
+
 def _student_notification_payload(notification):
     type_map = {
         StudentNotification.KIND_LESSON_ACCEPTED: 'booked',
         StudentNotification.KIND_LESSON_REJECTED: 'rejected',
+        StudentNotification.KIND_LESSON_COMMENT: 'comment',
         StudentNotification.KIND_TOKENS_ADDED: 'tokens',
     }
 
@@ -471,6 +490,10 @@ def _student_notification_payload(notification):
         'end_time': notification.end_time.strftime('%H:%M') if notification.end_time else None,
         'created_at': timezone.localtime(notification.created_at).isoformat(),
     }
+
+
+def _has_complete_onboarding_answers(answers):
+    return all(str(answers.get(key, '')).strip() for key in ('subject', 'classLevel', 'tutor'))
 
 
 def _today():
@@ -689,7 +712,7 @@ def onboarding_answers(request):
     if not isinstance(answers, dict):
         return JsonResponse({'error': 'Odpowiedzi ankiety muszą być obiektem.'}, status=400)
 
-    allowed_keys = {'subject', 'format', 'tutor', 'phone', 'fullName'}
+    allowed_keys = {'subject', 'classLevel', 'format', 'tutor', 'phone', 'fullName'}
     profile.onboarding_answers = {
         key: value
         for key, value in answers.items()
@@ -1091,7 +1114,8 @@ def calendar_teacher_reserve_slot(request):
     slot.student = student
     slot.rejected_student = None
     slot.confirmed_at = timezone.now() if student else None
-    slot.save(update_fields=['end_time', 'status', 'student', 'rejected_student', 'confirmed_at', 'updated_at'])
+    slot.teacher_comment = ''
+    slot.save(update_fields=['end_time', 'status', 'student', 'rejected_student', 'confirmed_at', 'teacher_comment', 'updated_at'])
     if student:
         _create_lesson_notification(student, slot, StudentNotification.KIND_LESSON_ACCEPTED)
 
@@ -1141,7 +1165,8 @@ def calendar_decide_slot(request):
             slot.student = None
             slot.status = LessonSlot.STATUS_AVAILABLE
             slot.confirmed_at = None
-            slot.save(update_fields=['status', 'student', 'rejected_student', 'confirmed_at', 'updated_at'])
+            slot.teacher_comment = ''
+            slot.save(update_fields=['status', 'student', 'rejected_student', 'confirmed_at', 'teacher_comment', 'updated_at'])
             _create_lesson_notification(rejected_student, slot, StudentNotification.KIND_LESSON_REJECTED)
 
     return JsonResponse({'slot': _slot_payload(slot)})
@@ -1164,6 +1189,8 @@ def calendar_book_slot(request):
         profile = StudentProfile.objects.select_for_update().filter(user=request.user).first()
         if not profile:
             return JsonResponse({'error': 'Nie znaleziono profilu ucznia.'}, status=404)
+        if not _has_complete_onboarding_answers(profile.onboarding_answers):
+            return JsonResponse({'error': 'Uzupełnij dane z ankiety w oknie Profil.'}, status=400)
         if profile.tokens < 1:
             return JsonResponse({'error': 'Brak żetonów. Nie można rezerwować lekcji.'}, status=400)
 
@@ -1189,7 +1216,8 @@ def calendar_book_slot(request):
         slot.status = LessonSlot.STATUS_PENDING
         slot.rejected_student = None
         slot.confirmed_at = None
-        slot.save(update_fields=['student', 'status', 'rejected_student', 'confirmed_at', 'updated_at'])
+        slot.teacher_comment = ''
+        slot.save(update_fields=['student', 'status', 'rejected_student', 'confirmed_at', 'teacher_comment', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot), 'tokens': profile.tokens})
 
@@ -1232,9 +1260,47 @@ def calendar_cancel_slot(request):
         slot.status = LessonSlot.STATUS_AVAILABLE
         slot.rejected_student = None
         slot.confirmed_at = None
-        slot.save(update_fields=['student', 'status', 'rejected_student', 'confirmed_at', 'updated_at'])
+        slot.teacher_comment = ''
+        slot.save(update_fields=['student', 'status', 'rejected_student', 'confirmed_at', 'teacher_comment', 'updated_at'])
 
     return JsonResponse({'slot': _slot_payload(slot), 'tokens': profile.tokens})
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def calendar_lesson_comment(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if not _is_teacher(request.user):
+        return JsonResponse({'error': 'Tylko korepetytor może dodać komentarz do lekcji.'}, status=403)
+
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'error': 'Nieprawidłowy JSON.'}, status=400)
+
+    comment = str(data.get('comment', '')).strip()
+    if len(comment) > 1000:
+        return JsonResponse({'error': 'Komentarz może mieć maksymalnie 1000 znaków.'}, status=400)
+
+    with transaction.atomic():
+        slot = LessonSlot.objects.select_for_update().select_related('teacher', 'student').filter(
+            id=data.get('slot_id'),
+            teacher=request.user,
+            status=LessonSlot.STATUS_BOOKED,
+            student__isnull=False,
+        ).first()
+        if not slot:
+            return JsonResponse({'error': 'Komentarz można dodać tylko do potwierdzonej lekcji z uczniem.'}, status=404)
+
+        previous_comment = slot.teacher_comment.strip()
+        slot.teacher_comment = comment
+        slot.save(update_fields=['teacher_comment', 'updated_at'])
+
+        if comment and comment != previous_comment:
+            _create_lesson_comment_notification(slot.student, slot)
+
+    return JsonResponse({'slot': _slot_payload(slot)})
 
 
 @csrf_exempt
@@ -1354,6 +1420,12 @@ def package_contact_message(request):
 @csrf_exempt
 @require_POST
 def free_lesson_lead(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Musisz być zalogowany.'}, status=401)
+
+    if _is_teacher(request.user):
+        return JsonResponse({'error': 'Ten widok jest przeznaczony dla ucznia.'}, status=403)
+
     if timezone.localdate() > FREE_LESSON_DEADLINE:
         return JsonResponse({'error': 'Promocja darmowej lekcji była ważna do 14.08.2026.'}, status=400)
 
@@ -1363,7 +1435,7 @@ def free_lesson_lead(request):
 
     parent_full_name = str(data.get('parent_full_name', '')).strip()
     student_full_name = str(data.get('student_full_name', '')).strip()
-    email = str(data.get('email', '')).strip().lower()
+    email = str(request.user.email or data.get('email', '')).strip().lower()
     phone = str(data.get('phone', '')).strip()
     school_class = str(data.get('school_class', '')).strip()
     source_path = str(data.get('source_path', '')).strip()[:180]
@@ -1385,15 +1457,26 @@ def free_lesson_lead(request):
     if not school_class:
         return JsonResponse({'error': 'Wybierz klasę.'}, status=400)
 
-    lead = FreeLessonLead.objects.create(
-        parent_full_name=parent_full_name,
-        student_full_name=student_full_name,
-        email=email,
-        phone=phone,
-        school_class=school_class,
-        source_path=source_path,
-        user_agent=request.META.get('HTTP_USER_AGENT', '')[:1000],
-    )
+    with transaction.atomic():
+        profile = StudentProfile.objects.select_for_update().filter(user=request.user).first()
+        if not profile:
+            return JsonResponse({'error': 'Nie znaleziono profilu ucznia.'}, status=404)
+
+        token_was_granted = not FreeLessonLead.objects.filter(email=email).exists()
+        lead = FreeLessonLead.objects.create(
+            parent_full_name=parent_full_name,
+            student_full_name=student_full_name,
+            email=email,
+            phone=phone,
+            school_class=school_class,
+            source_path=source_path,
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:1000],
+        )
+
+        if token_was_granted:
+            profile.tokens += 1
+            profile.save(update_fields=['tokens', 'updated_at'])
+            _create_tokens_notification(request.user, 1, profile.tokens)
 
     try:
         _send_free_lesson_lead_email(lead)
@@ -1406,8 +1489,14 @@ def free_lesson_lead(request):
         lead.save(update_fields=['notification_sent_at', 'notification_error'])
 
     return JsonResponse({
-        'detail': 'Zgłoszenie zostało zapisane. Skontaktujemy się z Tobą, aby ustalić termin.',
+        'detail': (
+            'Zgłoszenie zostało zapisane. Dodaliśmy 1 darmowy żeton do Twojego konta.'
+            if token_was_granted
+            else 'Zgłoszenie zostało zapisane. Darmowy żeton był już wcześniej dodany do tego konta.'
+        ),
         'lead_id': lead.id,
+        'tokens': profile.tokens,
+        'user': _user_payload(request.user),
     }, status=201)
 
 

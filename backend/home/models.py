@@ -76,6 +76,7 @@ class LessonSlot(models.Model):
     end_time = models.TimeField()
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
     confirmed_at = models.DateTimeField(null=True, blank=True)
+    teacher_comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -152,10 +153,12 @@ class ChatReadState(models.Model):
 class StudentNotification(models.Model):
     KIND_LESSON_ACCEPTED = 'lesson_accepted'
     KIND_LESSON_REJECTED = 'lesson_rejected'
+    KIND_LESSON_COMMENT = 'lesson_comment'
     KIND_TOKENS_ADDED = 'tokens_added'
     KIND_CHOICES = [
         (KIND_LESSON_ACCEPTED, 'Lesson accepted'),
         (KIND_LESSON_REJECTED, 'Lesson rejected'),
+        (KIND_LESSON_COMMENT, 'Lesson comment'),
         (KIND_TOKENS_ADDED, 'Tokens added'),
     ]
 

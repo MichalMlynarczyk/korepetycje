@@ -3,10 +3,9 @@ import { API_BASE_URL } from '../api.js';
 import subjectPrimaryImage from '../../images/A1.png';
 import subjectMaturaImage from '../../images/A2.png';
 import subjectExtraImage from '../../images/A3.png';
-import formatOnlineImage from '../../images/A4.png';
 
-const contactPhoneDisplay = '+48 000 000 000';
-const contactPhoneHref = '+48000000000';
+const contactPhoneDisplay = '+48 511 955 518';
+const contactPhoneHref = '+48511955518';
 const messengerChatUrl = 'https://www.facebook.com/profile.php?id=61591144089900&mibextid=wwXIfr&rdid=LMErxcEybUPiCe0v&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F191Mh71ZZi%2F%3Fmibextid%3DwwXIfr#';
 
 const tabs = [
@@ -66,8 +65,49 @@ const pricingGroups = [
   },
   {
     id: 'secondary',
-    label: 'Szkoła średnia / matura',
-    note: 'Rozwijanie umiejętności, funkcje, problemy i arkusze maturalne.',
+    label: 'Średnia bez matury',
+    note: 'Klasy szkoły średniej z wyjątkiem klasy maturalnej.',
+    plans: [
+      {
+        name: 'Pakiet podstawowy',
+        price: 109,
+        icon: 'sprout',
+        features: [
+          '1 lekcja tygodniowo',
+          'Stały gwarantowany termin',
+          'Budowanie solidnych podstaw',
+          'Dla dzieci radzących sobie!',
+        ],
+      },
+      {
+        name: 'Pakiet rozwój',
+        price: 99,
+        icon: 'line',
+        popular: true,
+        features: [
+          '2 lekcje tygodniowo',
+          'Stały gwarantowany termin',
+          'Skuteczny rozwój umiejętności',
+          'Dla dzieci z drobnymi trudnościami!',
+        ],
+      },
+      {
+        name: 'Pakiet intensywny',
+        price: 89,
+        icon: 'target',
+        features: [
+          '3 lekcje tygodniowo',
+          'Stały gwarantowany termin',
+          'Maksymalne postępy',
+          'Dla dzieci z dużymi zaległościami!',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'graduation',
+    label: 'Klasa maturalna',
+    note: 'Systematyczne przygotowanie do matury podstawowej i rozszerzonej.',
     plans: [
       {
         name: 'Pakiet podstawowy',
@@ -156,9 +196,15 @@ const onboardingSubjects = [
     image: subjectPrimaryImage,
   },
   {
+    id: 'secondary',
+    label: 'Szkoła średnia bez matury',
+    description: 'Bieżące wsparcie w liceum i technikum, sprawdziany, kartkówki oraz nadrabianie trudniejszych działów.',
+    image: subjectMaturaImage,
+  },
+  {
     id: 'matura',
-    label: 'Szkoła średnia / matura',
-    description: 'Przygotowanie do matury podstawowej i rozszerzonej, nadrobienie zaległości, pomoc w zrozumieniu trudnych tematów.',
+    label: 'Klasa maturalna',
+    description: 'Przygotowanie do matury podstawowej i rozszerzonej, arkusze, powtórki i praca nad strategią egzaminacyjną.',
     image: subjectMaturaImage,
   },
   {
@@ -169,8 +215,52 @@ const onboardingSubjects = [
   },
 ];
 
+const onboardingClassLevels = {
+  primary: [
+    { id: 'primary-1', label: 'Klasa 1 szkoły podstawowej', description: 'Pierwsze kroki z matematyką i spokojne budowanie podstaw.' },
+    { id: 'primary-2', label: 'Klasa 2 szkoły podstawowej', description: 'Ćwiczenie liczenia, zadań tekstowych i bieżących tematów.' },
+    { id: 'primary-3', label: 'Klasa 3 szkoły podstawowej', description: 'Utrwalenie podstaw przed starszymi klasami.' },
+    { id: 'primary-4', label: 'Klasa 4 szkoły podstawowej', description: 'Ułamki, geometria i wejście w nowy tryb nauki.' },
+    { id: 'primary-5', label: 'Klasa 5 szkoły podstawowej', description: 'Regularne wsparcie przy sprawdzianach i trudniejszych działach.' },
+    { id: 'primary-6', label: 'Klasa 6 szkoły podstawowej', description: 'Porządkowanie wiedzy i przygotowanie do kolejnych etapów.' },
+    { id: 'primary-7', label: 'Klasa 7 szkoły podstawowej', description: 'Równania, procenty, geometria i praca z zaległościami.' },
+    { id: 'primary-8', label: 'Klasa 8 szkoły podstawowej', description: 'Bieżąca nauka oraz przygotowanie do egzaminu ósmoklasisty.' },
+  ],
+  secondary: [
+    { id: 'secondary-1-liceum', label: 'Klasa 1 liceum', description: 'Start szkoły średniej, funkcje, algebra i uporządkowanie podstaw.' },
+    { id: 'secondary-2-liceum', label: 'Klasa 2 liceum', description: 'Bieżące tematy, sprawdziany i nadrabianie trudniejszych działów.' },
+    { id: 'secondary-3-liceum', label: 'Klasa 3 liceum', description: 'Systematyczne wsparcie przed klasą maturalną.' },
+    { id: 'secondary-1-technikum', label: 'Klasa 1 technikum', description: 'Matematyka w nowej szkole i spokojne wejście w materiał.' },
+    { id: 'secondary-2-technikum', label: 'Klasa 2 technikum', description: 'Ćwiczenie bieżących tematów i przygotowanie do sprawdzianów.' },
+    { id: 'secondary-3-technikum', label: 'Klasa 3 technikum', description: 'Utrwalenie wiedzy i praca z bardziej wymagającymi działami.' },
+    { id: 'secondary-4-technikum', label: 'Klasa 4 technikum', description: 'Powtórki, bieżące wsparcie i przygotowanie do klasy maturalnej.' },
+  ],
+  matura: [
+    { id: 'matura-liceum', label: 'Klasa maturalna liceum', description: 'Przygotowanie do matury podstawowej lub rozszerzonej.' },
+    { id: 'matura-technikum', label: 'Klasa maturalna technikum', description: 'Plan powtórek, arkusze i praca pod egzamin maturalny.' },
+    { id: 'matura-retake', label: 'Poprawa matury', description: 'Indywidualne przygotowanie do ponownego podejścia.' },
+  ],
+  other: [
+    { id: 'other-primary', label: 'Szkoła podstawowa', description: 'Dodatkowe lekcje przed sprawdzianem, konkursem lub trudnym tematem.' },
+    { id: 'other-secondary', label: 'Szkoła średnia', description: 'Dodatkowe wsparcie do kartkówki, sprawdzianu albo zaległości.' },
+    { id: 'other-matura', label: 'Klasa maturalna', description: 'Dodatkowa lekcja przed arkuszem, próbną maturą lub konkretnym działem.' },
+    { id: 'other-studies', label: 'Studia', description: 'Pomoc z matematyką na studiach lub konkretnym zagadnieniem.' },
+    { id: 'other-custom', label: 'Inny poziom', description: 'Indywidualna potrzeba, którą doprecyzujesz z korepetytorem.' },
+  ],
+};
+
+function getClassLevelOptions(subjectId) {
+  return onboardingClassLevels[subjectId] ?? [];
+}
+
+function getClassLevelById(classLevelId) {
+  return Object.values(onboardingClassLevels)
+    .flat()
+    .find((item) => item.id === classLevelId);
+}
+
 const tutoringFormats = [
-  { id: 'online', label: 'Online', profileLabel: 'Zdalnie', description: 'Lekcje zdalne z materiałami w panelu.', image: formatOnlineImage },
+  { id: 'online', label: 'Online', profileLabel: 'Zdalnie', description: 'Lekcje zdalne z materiałami w panelu.' },
 ];
 
 const lessonPlaceOptions = [
@@ -184,8 +274,8 @@ const onboardingTutors = [
     initial: 'K',
     field: 'Inżynieria Energetyki',
     year: 'III rok Politechniki',
-    levels: '7-8 klasa, liceum, matura',
-    specialization: 'Matura rozszerzona,\nfizyka, analiza',
+    levels: '1-8 klasa, liceum, technikum, matura',
+    specialization: 'Matura podstawowa,\nmatura rozszerzona',
     style: 'Logiczne myślenie i\npraktyka',
     quote: 'Tłumaczę trudne zagadnienia na proste przykłady i pokazuję, jak to działa w praktyce.',
     bullets: [
@@ -201,8 +291,8 @@ const onboardingTutors = [
     initial: 'H',
     field: 'Budownictwo',
     year: 'II rok Politechniki',
-    levels: '1-8 klasa, liceum, matura',
-    specialization: 'Matura podstawowa,\ngeometria, statyka',
+    levels: '1-8 klasa, liceum, technikum, matura',
+    specialization: 'Matura podstawowa,\nmatura rozszerzona',
     style: 'Spokój, cierpliwość i krok\npo kroku',
     quote: 'Pomagam zrozumieć podstawy i uporządkować wiedzę, krok po kroku.',
     bullets: [
@@ -220,8 +310,8 @@ const tutorProfiles = [
     initial: 'K',
     field: 'Inżynieria Energetyki',
     year: 'III rok Politechniki',
-    levels: '7-8 klasa, liceum, matura',
-    specialization: 'Matura rozszerzona,\nfizyka, analiza',
+    levels: '1-8 klasa, liceum, technikum, matura',
+    specialization: 'Matura podstawowa,\nmatura rozszerzona',
     style: 'Logiczne myślenie i\npraktyka',
     quote: 'Tłumaczę trudne zagadnienia na proste przykłady i pokazuję, jak to działa w praktyce.',
     bullets: [
@@ -236,8 +326,8 @@ const tutorProfiles = [
     initial: 'H',
     field: 'Budownictwo',
     year: 'II rok Politechniki',
-    levels: '1-8 klasa, liceum, matura',
-    specialization: 'Matura podstawowa,\ngeometria, statyka',
+    levels: '1-8 klasa, liceum, technikum, matura',
+    specialization: 'Matura podstawowa,\nmatura rozszerzona',
     style: 'Spokój, cierpliwość i krok\npo kroku',
     quote: 'Pomagam zrozumieć podstawy i uporządkować wiedzę, krok po kroku.',
     bullets: [
@@ -562,7 +652,7 @@ function getStoredOnboardingAnswers(userId) {
 }
 
 function isOnboardingComplete(answers) {
-  return Boolean(answers?.subject && answers?.format && answers?.tutor);
+  return Boolean(answers?.subject && answers?.classLevel && answers?.tutor);
 }
 
 function getInitialOnboardingAnswers(user) {
@@ -595,7 +685,7 @@ function getOnboardingSteps(includeNameStep) {
   return [
     ...(includeNameStep ? [{ id: 'name', label: 'Dane' }] : []),
     { id: 'subject', label: 'Zakres' },
-    { id: 'format', label: 'Forma' },
+    { id: 'classLevel', label: 'Klasa' },
     { id: 'tutor', label: 'Korepetytor' },
     { id: 'contact', label: 'Kontakt' },
   ];
@@ -805,6 +895,10 @@ export function StudentPage({ user, onLogout, onAccountDeleted, forceOnboarding 
                 tokens={tokens}
                 onTokensChange={setTokens}
                 onboardingAnswers={onboardingAnswers}
+                onOpenOnboarding={() => {
+                  setShowOnboarding(true);
+                  setActiveTab('profile');
+                }}
               />
             )}
             {activeTab === 'tutors' && <TutorsPanel onOpenChat={() => setActiveTab('chat')} />}
@@ -1091,7 +1185,7 @@ function StudentHeader({
   );
 }
 
-function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
+function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers, onOpenOnboarding }) {
   const lessonDetailsRef = useRef(null);
   const [weekStart, setWeekStart] = useState(getWeekStart());
   const [teachers, setTeachers] = useState([]);
@@ -1111,6 +1205,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   const [slotToConfirm, setSlotToConfirm] = useState(null);
   const [slotToCancel, setSlotToCancel] = useState(null);
   const [isNoTokensModalOpen, setIsNoTokensModalOpen] = useState(false);
+  const [isOnboardingRequiredModalOpen, setIsOnboardingRequiredModalOpen] = useState(false);
   const slotMap = Object.fromEntries(
     slots.map((slot) => [slotKey(slot.date, slot.start_time), slot]),
   );
@@ -1137,6 +1232,7 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
     12,
   ) <= maxCalendarDate;
   const hasTokens = tokens > 0;
+  const hasCompleteOnboarding = isOnboardingComplete(onboardingAnswers);
   const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) ?? null;
   const preferredTutor = onboardingTutors.find((tutor) => tutor.id === onboardingAnswers?.tutor) ?? null;
   const preferredTeacher = preferredTutor
@@ -1384,6 +1480,12 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
   const openBookingConfirm = (slot = selectedSlot) => {
     if (!slot) {
       setStatus({ type: 'error', message: 'Najpierw wybierz wolny termin w kalendarzu.' });
+      return;
+    }
+
+    if (!hasCompleteOnboarding) {
+      setStatus({ type: 'error', message: 'Uzupełnij dane z ankiety w oknie Profil.' });
+      setIsOnboardingRequiredModalOpen(true);
       return;
     }
 
@@ -1835,6 +1937,16 @@ function CalendarPanel({ user, tokens, onTokensChange, onboardingAnswers }) {
         <NoTokensModal onClose={() => setIsNoTokensModalOpen(false)} />
       )}
 
+      {isOnboardingRequiredModalOpen && (
+        <OnboardingRequiredModal
+          onClose={() => setIsOnboardingRequiredModalOpen(false)}
+          onOpenProfile={() => {
+            setIsOnboardingRequiredModalOpen(false);
+            onOpenOnboarding?.();
+          }}
+        />
+      )}
+
     </div>
   );
 }
@@ -1986,6 +2098,47 @@ function NoTokensModal({ onClose }) {
   );
 }
 
+function OnboardingRequiredModal({ onClose, onOpenProfile }) {
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 px-5 py-8 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-white px-6 py-6 shadow-[0_24px_70px_rgba(15,23,42,0.35)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h3 className="text-2xl font-black text-slate-950">Uzupełnij dane z ankiety</h3>
+        <p className="mt-3 text-base font-semibold leading-7 text-slate-500">
+          Przed rezerwacją lekcji uzupełnij dane z ankiety w oknie Profil.
+        </p>
+        <p className="mt-3 rounded-md bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
+          Wybierz zakres, dokładną klasę lub poziom oraz korepetytora.
+        </p>
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border-2 border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:border-slate-700"
+          >
+            Zamknij
+          </button>
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="rounded-md bg-orange-600 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-700"
+          >
+            Przejdź do Profilu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NotificationsPanel({ notifications }) {
   const sortedNotifications = [...notifications].sort((first, second) => (
     new Date(second.created_at).getTime() - new Date(first.created_at).getTime()
@@ -2007,6 +2160,15 @@ function NotificationsPanel({ notifications }) {
         card: 'border-orange-100 bg-orange-50',
         iconBox: 'bg-orange-100 text-orange-700',
         title: 'text-orange-800',
+      };
+    }
+
+    if (type === 'comment') {
+      return {
+        icon: 'chat',
+        card: 'border-sky-100 bg-sky-50',
+        iconBox: 'bg-sky-100 text-sky-700',
+        title: 'text-sky-800',
       };
     }
 
@@ -2329,6 +2491,14 @@ function LessonDetailsPanel({
             Pliki od korepetytora znajdziesz w zakładce Notatki i pliki.
           </div>
         </DetailBlock>
+
+        {isReserved && slot?.teacher_comment && (
+          <DetailBlock title="Komentarz od korepetytora">
+            <div className="whitespace-pre-wrap rounded-lg border border-[#b7d5c8] bg-[#eef5ee] px-4 py-3 text-sm font-bold leading-6 text-[#07463f]">
+              {slot.teacher_comment}
+            </div>
+          </DetailBlock>
+        )}
       </div>
 
       {isCompleted ? (
@@ -2761,8 +2931,11 @@ function StudentTutorProfileCard({ tutor, isMobileExpanded, onToggleMobile, onOp
 }
 
 function getPricingGroupIdFromSubject(subjectId) {
-  if (subjectId === 'matura') {
+  if (subjectId === 'secondary') {
     return 'secondary';
+  }
+  if (subjectId === 'matura') {
+    return 'graduation';
   }
   if (subjectId === 'other') {
     return 'extra';
@@ -2804,11 +2977,11 @@ function PricingPanel({ user, onboardingAnswers }) {
           </p>
           <p className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
             <InfoSmallIcon className="h-5 w-5" />
-            Wszystkie ceny podane są w przeliczeniu na 60-minutowe zajęcia indywidualne.
+            Wszystkie ceny podane są w przeliczeniu na 55-minutowe zajęcia indywidualne.
           </p>
         </div>
 
-        <div className="mx-auto mt-8 grid max-w-4xl gap-2 rounded-xl bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:grid-cols-3">
+        <div className="mx-auto mt-8 grid max-w-5xl gap-2 rounded-xl bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:grid-cols-2 lg:grid-cols-4">
           {pricingGroups.map((group) => (
             <button
               key={group.id}
@@ -2911,12 +3084,14 @@ function PackageContactModal({ user, onboardingAnswers, group, plan, onClose }) 
   const studentName = user?.full_name || user?.email || 'Uczeń';
   const selectedTutor = onboardingTutors.find((item) => item.id === onboardingAnswers?.tutor);
   const selectedFormat = tutoringFormats.find((item) => item.id === onboardingAnswers?.format) ?? tutoringFormats[0];
+  const selectedClassLevel = getClassLevelById(onboardingAnswers?.classLevel);
   const studentPhone = onboardingAnswers?.phone?.trim();
   const bodyLines = [
     'Dzień dobry,',
     '',
     `Uczeń ${studentName} chciałby zakupić żetony na lekcje: ${group.label}.`,
     `Wybrany pakiet: ${plan.name}, ${plan.price} zł/h.`,
+    selectedClassLevel ? `Klasa / poziom: ${selectedClassLevel.label}.` : null,
     selectedTutor ? `Wybrany korepetytor: ${selectedTutor.name}.` : null,
     selectedFormat ? `Forma zajęć: ${selectedFormat.profileLabel}.` : null,
     studentPhone ? `Numer kontaktowy ucznia: ${studentPhone}.` : 'Numer kontaktowy ucznia: jeszcze nie dodany.',
@@ -3120,7 +3295,7 @@ function ProfilePanel({ user, showOnboarding = false, forceNameStep = false, onO
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const selectedSubject = onboardingSubjects.find((item) => item.id === onboardingAnswers?.subject);
-  const selectedFormat = tutoringFormats.find((item) => item.id === onboardingAnswers?.format) ?? tutoringFormats[0];
+  const selectedClassLevel = getClassLevelById(onboardingAnswers?.classLevel);
   const selectedTutor = onboardingTutors.find((item) => item.id === onboardingAnswers?.tutor);
   const contactPhone = onboardingAnswers?.phone?.trim() || 'Jeszcze nie dodany';
 
@@ -3184,7 +3359,7 @@ function ProfilePanel({ user, showOnboarding = false, forceNameStep = false, onO
         </div>
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <ProfileField label="Zakres nauczania" value={selectedSubject?.label || 'Jeszcze nie wybrany'} />
-          <ProfileField label="Sposób nauczania" value={selectedFormat?.profileLabel || 'Jeszcze nie wybrany'} />
+          <ProfileField label="Klasa / poziom" value={selectedClassLevel?.label || 'Jeszcze nie wybrany'} />
           <ProfileField label="Wybrany korepetytor" value={selectedTutor?.name || 'Jeszcze nie wybrany'} />
           <ProfileField label="Numer kontaktowy" value={contactPhone} />
         </div>
@@ -3337,6 +3512,7 @@ function OnboardingSurvey({ user, forceNameStep, initialAnswers, onComplete }) {
   const [form, setForm] = useState({
     fullName: initialAnswers?.fullName || (hasKnownName ? user.full_name : ''),
     subject: initialAnswers?.subject || '',
+    classLevel: initialAnswers?.classLevel || '',
     format: initialAnswers?.format === 'krakow' ? 'online' : initialAnswers?.format || 'online',
     tutor: initialAnswers?.tutor || '',
     phone: initialAnswers?.phone || '',
@@ -3349,7 +3525,7 @@ function OnboardingSurvey({ user, forceNameStep, initialAnswers, onComplete }) {
   const canGoNext = (
     (step === 'name' && Boolean(form.fullName.trim()))
     || (step === 'subject' && Boolean(form.subject))
-    || (step === 'format' && Boolean(form.format))
+    || (step === 'classLevel' && Boolean(form.classLevel))
     || (step === 'tutor' && Boolean(form.tutor))
     || step === 'contact'
   );
@@ -3365,6 +3541,7 @@ function OnboardingSurvey({ user, forceNameStep, initialAnswers, onComplete }) {
     setForm((current) => ({
       ...current,
       [field]: value,
+      ...(field === 'subject' ? { classLevel: '' } : {}),
     }));
     setStep(nextStep);
   };
@@ -3440,16 +3617,15 @@ function OnboardingSurvey({ user, forceNameStep, initialAnswers, onComplete }) {
       {step === 'subject' && (
         <SubjectChoiceCards
           selected={form.subject}
-          onChoose={(value) => choose('subject', value, 'format')}
+          onChoose={(value) => choose('subject', value, 'classLevel')}
         />
       )}
 
-      {step === 'format' && (
-        <ChoiceGrid
-          title="Jaka forma korepetycji?"
-          options={tutoringFormats}
-          selected={form.format}
-          onChoose={(value) => choose('format', value, 'tutor')}
+      {step === 'classLevel' && (
+        <ClassLevelChoiceGrid
+          subject={form.subject}
+          selected={form.classLevel}
+          onChoose={(value) => choose('classLevel', value, 'tutor')}
         />
       )}
 
@@ -3541,7 +3717,7 @@ function SubjectChoiceCards({ selected, onChoose }) {
   return (
     <div className="mt-8">
       <h3 className="text-xl font-black text-slate-950">Jaki zakres Cię interesuje?</h3>
-      <div className="mt-5 grid gap-6 xl:grid-cols-3">
+      <div className="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {onboardingSubjects.map((option) => (
           <article
             key={option.id}
@@ -3585,44 +3761,40 @@ function SubjectChoiceCards({ selected, onChoose }) {
   );
 }
 
-function ChoiceGrid({ title, options, selected, onChoose }) {
+function ClassLevelChoiceGrid({ subject, selected, onChoose }) {
+  const selectedSubject = onboardingSubjects.find((option) => option.id === subject);
+  const options = getClassLevelOptions(subject);
+
   return (
     <div className="mt-8">
-      <h3 className="text-xl font-black text-slate-950">{title}</h3>
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onChoose(option.id)}
-            className={`overflow-hidden rounded-xl border text-left transition ${
-              selected === option.id
-                ? 'border-[#007566] bg-[#eef5ee] text-[#07463f]'
-                : 'border-zinc-200 bg-[#fbfaf7] text-slate-700 hover:border-[#b7d5c8]'
-            }`}
-          >
-            {option.image && (
-              <img
-                src={option.image}
-                alt=""
-                className="h-44 w-full object-cover sm:h-52 lg:h-48"
-              />
-            )}
-            <span className="block px-5 py-5">
-              <span className="flex items-center gap-3">
-                {option.initial && (
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#007566] text-base font-black text-white">
-                    {option.initial}
-                  </span>
-                )}
-                <span className="text-lg font-black">{option.label}</span>
-              </span>
+      <h3 className="text-xl font-black text-slate-950">W której klasie jesteś?</h3>
+      {selectedSubject && (
+        <p className="mt-2 text-sm font-bold text-slate-500">
+          Zakres: {selectedSubject.label}
+        </p>
+      )}
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {options.map((option) => {
+          const isSelected = selected === option.id;
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onChoose(option.id)}
+              className={`min-h-36 rounded-xl border px-5 py-5 text-left transition ${
+                isSelected
+                  ? 'border-[#007566] bg-[#eef5ee] text-[#07463f] shadow-[0_16px_34px_rgba(7,70,63,0.12)]'
+                  : 'border-zinc-200 bg-[#fbfaf7] text-slate-700 hover:border-[#b7d5c8] hover:shadow-[0_14px_30px_rgba(15,23,42,0.06)]'
+              }`}
+            >
+              <span className="block text-lg font-black">{option.label}</span>
               <span className="mt-3 block text-sm font-semibold leading-6 text-slate-500">
                 {option.description}
               </span>
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

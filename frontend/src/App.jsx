@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Footer } from './sections/Footer.jsx';
-import { Header } from './sections/Header.jsx';
+import { AuthModal, Header } from './sections/Header.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { FreeLessonPage } from './pages/FreeLessonPage.jsx';
 import { StudentPage } from './pages/StudentPage.jsx';
@@ -78,6 +78,12 @@ function App() {
     setForceOnboardingUserId(null);
   };
 
+  const handleFreeLessonComplete = (user) => {
+    setCurrentUser(user);
+    setForceOnboardingUserId(null);
+    window.history.pushState({}, '', '/');
+  };
+
   if (!isAuthChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fcfaf7] text-base font-bold text-slate-500">
@@ -91,7 +97,11 @@ function App() {
       {!currentUser && !isFreeLessonPage && <Header onAuthSuccess={handleAuthSuccess} />}
       <main className="min-h-screen bg-white text-slate-950">
         {isFreeLessonPage ? (
-          <FreeLessonPage />
+          currentUser ? (
+            <FreeLessonPage user={currentUser} onComplete={handleFreeLessonComplete} />
+          ) : (
+            <FreeLessonAuthGate onAuthSuccess={handleAuthSuccess} />
+          )
         ) : currentUser?.role === 'teacher' ? (
           <TeacherPage user={currentUser} onLogout={handleLogout} />
         ) : currentUser ? (
@@ -107,6 +117,45 @@ function App() {
       </main>
       <Footer />
     </>
+  );
+}
+
+function FreeLessonAuthGate({ onAuthSuccess }) {
+  const [authMode, setAuthMode] = useState('register');
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-[#fbfaf7]">
+      <div className="absolute inset-0 bg-[#fbfaf7]" />
+      <div className="relative mx-auto flex min-h-screen max-w-4xl items-center justify-center px-5 text-center">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.26em] text-[#8fc1b2]">
+            Darmowa lekcja
+          </p>
+          <h1 className="mt-3 text-4xl font-black leading-tight text-[#07463f] sm:text-5xl">
+            Zaloguj się lub załóż konto
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-base font-semibold leading-7 text-slate-600">
+            Po rejestracji przejdziesz do formularza zapisu na darmową lekcję matematyki.
+          </p>
+        </div>
+      </div>
+
+      <AuthModal
+        mode={authMode}
+        onSwitchMode={setAuthMode}
+        onAuthSuccess={onAuthSuccess}
+        canClose={false}
+      />
+    </div>
   );
 }
 

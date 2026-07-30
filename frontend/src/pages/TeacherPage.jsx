@@ -17,8 +17,35 @@ const chatRefreshMs = 5000;
 
 const onboardingSubjectLabels = {
   primary: 'Klasa 1-8 podstawówka',
+  secondary: 'Szkoła średnia bez matury',
   matura: 'Szkoła średnia / matura',
   other: 'Lekcje dodatkowe',
+};
+
+const onboardingClassLevelLabels = {
+  'primary-1': 'Klasa 1 szkoły podstawowej',
+  'primary-2': 'Klasa 2 szkoły podstawowej',
+  'primary-3': 'Klasa 3 szkoły podstawowej',
+  'primary-4': 'Klasa 4 szkoły podstawowej',
+  'primary-5': 'Klasa 5 szkoły podstawowej',
+  'primary-6': 'Klasa 6 szkoły podstawowej',
+  'primary-7': 'Klasa 7 szkoły podstawowej',
+  'primary-8': 'Klasa 8 szkoły podstawowej',
+  'secondary-1-liceum': 'Klasa 1 liceum',
+  'secondary-2-liceum': 'Klasa 2 liceum',
+  'secondary-3-liceum': 'Klasa 3 liceum',
+  'secondary-1-technikum': 'Klasa 1 technikum',
+  'secondary-2-technikum': 'Klasa 2 technikum',
+  'secondary-3-technikum': 'Klasa 3 technikum',
+  'secondary-4-technikum': 'Klasa 4 technikum',
+  'matura-liceum': 'Klasa maturalna liceum',
+  'matura-technikum': 'Klasa maturalna technikum',
+  'matura-retake': 'Poprawa matury',
+  'other-primary': 'Szkoła podstawowa',
+  'other-secondary': 'Szkoła średnia',
+  'other-matura': 'Klasa maturalna',
+  'other-studies': 'Studia',
+  'other-custom': 'Inny poziom',
 };
 
 const tutoringFormatLabels = {
@@ -220,6 +247,24 @@ async function sendChatMessage(studentId, body) {
   }
 
   return data;
+}
+
+async function saveLessonComment(slotId, comment) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/calendar/comment/`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ slot_id: slotId, comment }),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Nie udało się zapisać komentarza.');
+  }
+
+  return data.slot;
 }
 
 export function TeacherPage({ user, onLogout }) {
@@ -488,6 +533,7 @@ function TeacherCalendar() {
   const [selectedMobileDayIso, setSelectedMobileDayIso] = useState(null);
   const [reservationSlot, setReservationSlot] = useState(null);
   const [pendingDecision, setPendingDecision] = useState(null);
+  const [isSavingLessonComment, setIsSavingLessonComment] = useState(false);
   const clickTimerRef = useRef(null);
   const weekDays = getWeekDays(weekStart);
   const selectedMobileDay = weekDays.find((day) => day.isoDate === selectedMobileDayIso) ?? null;
@@ -730,6 +776,32 @@ function TeacherCalendar() {
       await loadUpcomingLessons();
     } catch (error) {
       setStatus({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleSaveLessonComment = async (slot, comment) => {
+    if (!slot) {
+      return;
+    }
+
+    setStatus({ type: null, message: '' });
+    setIsSavingLessonComment(true);
+
+    try {
+      const updatedSlot = await saveLessonComment(slot.id, comment);
+      setSlots((currentSlots) => ({
+        ...currentSlots,
+        [slotKey(updatedSlot.date, updatedSlot.start_time)]: updatedSlot,
+      }));
+      setUpcomingLessons((currentLessons) => (
+        currentLessons.map((lesson) => (lesson.id === updatedSlot.id ? updatedSlot : lesson))
+      ));
+      setSelectedLesson(updatedSlot);
+      setStatus({ type: 'success', message: 'Komentarz do spotkania został zapisany.' });
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message });
+    } finally {
+      setIsSavingLessonComment(false);
     }
   };
 
@@ -1025,13 +1097,20 @@ function TeacherCalendar() {
       selectedLesson={selectedLesson}
       onSelectLesson={setSelectedLesson}
       onRequestDecision={(slot, action) => setPendingDecision({ slot, action })}
+      onSaveComment={handleSaveLessonComment}
+      isSavingComment={isSavingLessonComment}
     />
     </div>
   );
 }
 
-function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onRequestDecision }) {
+function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onRequestDecision, onSaveComment, isSavingComment }) {
   const selectedStatusMeta = selectedLesson?.status ? statusMeta[selectedLesson.status] : null;
+  const [lessonComment, setLessonComment] = useState(selectedLesson?.teacher_comment || '');
+
+  useEffect(() => {
+    setLessonComment(selectedLesson?.teacher_comment || '');
+  }, [selectedLesson?.id, selectedLesson?.teacher_comment]);
 
   return (
     <aside className="rounded-xl border border-zinc-200 bg-white px-6 py-7 shadow-[0_16px_36px_rgba(15,23,42,0.05)] 2xl:sticky 2xl:top-24 2xl:self-start">
@@ -1108,6 +1187,34 @@ function TeacherLessonsAside({ lessons, selectedLesson, onSelectLesson, onReques
             <DetailLine title="Zakres lekcji">
               {selectedLesson.lesson_scope || 'Uczeń nie podał zakresu lekcji.'}
             </DetailLine>
+            {selectedLesson.status === 'booked' && (
+              <div>
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  Komentarz dla ucznia
+                </p>
+                <textarea
+                  value={lessonComment}
+                  onChange={(event) => setLessonComment(event.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Np. Link do spotkania: https://..."
+                  className="w-full resize-none rounded-lg border border-zinc-200 bg-[#fbfaf7] px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#0a604f] focus:bg-white focus:ring-4 focus:ring-[#0a604f]/10"
+                />
+                <div className="mt-3 grid gap-2">
+                  <button
+                    type="button"
+                    disabled={isSavingComment}
+                    onClick={() => onSaveComment(selectedLesson, lessonComment)}
+                    className="w-full rounded-lg bg-[#007566] px-5 py-3 text-sm font-black text-white transition hover:bg-[#005d51] disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isSavingComment ? 'Zapisuję...' : 'Zapisz komentarz'}
+                  </button>
+                  <p className="text-xs font-semibold leading-5 text-slate-400">
+                    Po zapisaniu uczeń zobaczy komentarz w panelu i dostanie powiadomienie.
+                  </p>
+                </div>
+              </div>
+            )}
             {selectedLesson.status === 'pending' && (
               <div className="grid gap-3">
                 <button
@@ -1415,6 +1522,7 @@ function StudentsPanel({ mode = 'students' }) {
 
   const answers = selectedStudent?.onboarding_answers ?? {};
   const studentSubject = formatStudentPreference(answers.subject, onboardingSubjectLabels);
+  const studentClassLevel = formatStudentPreference(answers.classLevel, onboardingClassLevelLabels) || studentSubject;
   const studentFormat = formatStudentPreference(answers.format, tutoringFormatLabels);
   const studentTutor = formatStudentPreference(answers.tutor, tutorLabels);
   const studentPhone = answers.phone?.trim() || 'Jeszcze nie dodany';
@@ -1593,7 +1701,7 @@ function StudentsPanel({ mode = 'students' }) {
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <StudentInfoItem label="Data dodania" value={selectedStudent.created_at || 'Brak daty'} />
-                <StudentInfoItem label="Zakres nauczania" value={studentSubject} />
+                <StudentInfoItem label="Klasa / poziom" value={studentClassLevel} />
                 <StudentInfoItem label="Sposób nauczania" value={studentFormat} />
                 <StudentInfoItem label="Wybrany korepetytor" value={studentTutor} />
                 <StudentInfoItem label="Numer kontaktowy" value={studentPhone} />

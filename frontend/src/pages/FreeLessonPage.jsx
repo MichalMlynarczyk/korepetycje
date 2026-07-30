@@ -5,7 +5,6 @@ import individualLearningImage from '../assets/individual-learning.png';
 const initialForm = {
   parent_full_name: '',
   student_full_name: '',
-  email: '',
   phone: '',
   school_class: '',
 };
@@ -39,7 +38,7 @@ const benefits = [
   { icon: <CalendarIcon />, title: 'Ustalimy plan', text: 'Ustalimy najlepszy plan nauki dopasowany do potrzeb' },
 ];
 
-export function FreeLessonPage() {
+export function FreeLessonPage({ user, onComplete }) {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState({ type: null, message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +65,7 @@ export function FreeLessonPage() {
         credentials: 'include',
         body: JSON.stringify({
           ...form,
+          email: user?.email || '',
           source_path: window.location.pathname,
         }),
       });
@@ -80,6 +80,7 @@ export function FreeLessonPage() {
         type: 'success',
         message: data.detail || 'Zgłoszenie zostało zapisane. Skontaktujemy się z Tobą.',
       });
+      onComplete?.(data.user);
     } catch (error) {
       setStatus({
         type: 'error',
@@ -95,22 +96,16 @@ export function FreeLessonPage() {
       <div className="min-h-screen w-full overflow-hidden bg-[#fffdf9]">
         <header className="border-b border-[#e7e2da] px-5 sm:px-10">
           <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between">
-            <a href="/" className="text-lg font-black tracking-tight">
+            <a href="/" className="text-xl font-black tracking-tight">
               NaSTOmatMa
             </a>
-            <nav className="hidden items-center gap-9 text-xs font-bold text-slate-700 md:flex">
+            <nav className="hidden items-center gap-9 text-sm font-bold text-slate-700 md:flex">
               <a href="/#o-nas" className="transition hover:text-[#007f6d]">O nas</a>
               <a href="/#jak-to-dziala" className="transition hover:text-[#007f6d]">Jak to działa</a>
               <a href="/#oferta" className="transition hover:text-[#007f6d]">Oferta</a>
               <a href="/#cennik" className="transition hover:text-[#007f6d]">Cennik</a>
               <a href="/#kontakt" className="transition hover:text-[#007f6d]">Kontakt</a>
             </nav>
-            <a
-              href="/"
-              className="rounded-md bg-[#007f6d] px-5 py-2 text-xs font-black text-white shadow-lg shadow-[#007f6d]/25 transition hover:bg-[#006a5b]"
-            >
-              Zaloguj się
-            </a>
           </div>
         </header>
 
@@ -188,15 +183,6 @@ export function FreeLessonPage() {
                     value={form.parent_full_name}
                     onChange={updateField}
                     placeholder="Wpisz imię i nazwisko"
-                    required
-                  />
-                  <Field
-                    label="E-mail"
-                    type="email"
-                    name="email"
-                    value={form.email}
-                    onChange={updateField}
-                    placeholder="Wpisz adres e-mail"
                     required
                   />
                   <Field

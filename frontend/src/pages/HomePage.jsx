@@ -5,8 +5,8 @@ import heroStudentImage from '../../images/ChatGPT Image 2 lip 2026, 22_32_26.pn
 import contactImage from '../../images/kontakt.png';
 
 const MESSENGER_CHAT_URL = 'https://www.facebook.com/profile.php?id=61591144089900&mibextid=wwXIfr&rdid=LMErxcEybUPiCe0v&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F191Mh71ZZi%2F%3Fmibextid%3DwwXIfr#';
-const CONTACT_PHONE_DISPLAY = '+48 000 000 000';
-const CONTACT_PHONE_HREF = '+48000000000';
+const CONTACT_PHONE_DISPLAY = '+48 511 955 518';
+const CONTACT_PHONE_HREF = '+48511955518';
 
 function openRegisterModal() {
   window.dispatchEvent(
@@ -33,8 +33,8 @@ const tutors = [
     color: 'bg-orange-700',
     text: 'Specjalizuję się w przygotowaniu do matury oraz w tłumaczeniu trudnych zagadnień w prosty i zrozumiały sposób.',
     year: 'III rok Politechniki',
-    levels: '7-8 klasa, liceum, matura',
-    specialization: 'Matura rozszerzona,\nfizyka, analiza',
+    levels: '1-8 klasa, liceum, technikum, matura',
+    specialization: 'Matura podstawowa,\nmatura rozszerzona',
     style: 'Logiczne myślenie i\npraktyka',
     quote: 'Tłumaczę trudne zagadnienia na proste przykłady i pokazuję, jak to działa w praktyce.',
     bullets: [
@@ -52,8 +52,8 @@ const tutors = [
     color: 'bg-orange-600',
     text: 'Pomagam zrozumieć matematykę krok po kroku i pokazuję, że da się ją polubić.',
     year: 'II rok Politechniki',
-    levels: '1-8 klasa, liceum, matura',
-    specialization: 'Matura podstawowa,\ngeometria, statyka',
+    levels: '1-8 klasa, liceum, technikum, matura',
+    specialization: 'Matura podstawowa,\nmatura rozszerzona',
     style: 'Spokój, cierpliwość i krok\npo kroku',
     quote: 'Pomagam zrozumieć podstawy i uporządkować wiedzę, krok po kroku.',
     bullets: [
@@ -1655,8 +1655,49 @@ function PriceList() {
     },
     {
       id: 'secondary',
-      label: 'Szkoła średnia / matura',
-      note: 'Rozwijanie umiejętności, funkcje, problemy i arkusze maturalne.',
+      label: 'Średnia bez matury',
+      note: 'Klasy szkoły średniej z wyjątkiem klasy maturalnej.',
+      plans: [
+        {
+          name: 'Pakiet podstawowy',
+          price: 109,
+          icon: 'sprout',
+          features: [
+            '1 lekcja tygodniowo',
+            'Stały gwarantowany termin',
+            'Budowanie solidnych podstaw',
+            'Dla dzieci radzących sobie!',
+          ],
+        },
+        {
+          name: 'Pakiet rozwój',
+          price: 99,
+          icon: 'line',
+          popular: true,
+          features: [
+            '2 lekcje tygodniowo',
+            'Stały gwarantowany termin',
+            'Skuteczny rozwój umiejętności',
+            'Dla dzieci z drobnymi trudnościami!',
+          ],
+        },
+        {
+          name: 'Pakiet intensywny',
+          price: 89,
+          icon: 'target',
+          features: [
+            '3 lekcje tygodniowo',
+            'Stały gwarantowany termin',
+            'Maksymalne postępy',
+            'Dla dzieci z dużymi zaległościami!',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'graduation',
+      label: 'Klasa maturalna',
+      note: 'Systematyczne przygotowanie do matury podstawowej i rozszerzonej.',
       plans: [
         {
           name: 'Pakiet podstawowy',
@@ -1840,11 +1881,11 @@ function PriceList() {
           </p>
           <p className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
             <InfoIcon className="h-5 w-5" />
-            Wszystkie ceny podane są w przeliczeniu na 60-minutowe zajęcia indywidualne.
+            Wszystkie ceny podane są w przeliczeniu na 55-minutowe zajęcia indywidualne.
           </p>
         </div>
 
-        <div className="mx-auto mt-8 grid max-w-4xl gap-2 rounded-xl bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:grid-cols-3">
+        <div className="mx-auto mt-8 grid max-w-5xl gap-2 rounded-xl bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:grid-cols-2 lg:grid-cols-4">
           {pricingGroups.map((group) => (
             <button
               key={group.id}
@@ -1998,7 +2039,7 @@ function LegacyPriceList() {
 
             <div className="mt-5 inline-flex max-w-full items-start gap-2 rounded-md bg-orange-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-400 sm:mt-7 sm:items-center sm:gap-3 sm:px-5 sm:text-sm sm:leading-6">
               <InfoIcon className="h-4 w-4 shrink-0 text-orange-500 sm:h-5 sm:w-5" />
-              <span>Wszystkie ceny podane są w przeliczeniu na 60-minutowe zajęcia indywidualne.</span>
+              <span>Wszystkie ceny podane są w przeliczeniu na 55-minutowe zajęcia indywidualne.</span>
             </div>
 
             <div className="mt-8 grid gap-5 sm:mt-12 sm:gap-8 xl:grid-cols-3">

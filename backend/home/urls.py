@@ -19,6 +19,7 @@ urlpatterns = [
     path('calendar/toggle/', views.calendar_toggle_slot, name='calendar-toggle-slot'),
     path('calendar/reserve/', views.calendar_teacher_reserve_slot, name='calendar-teacher-reserve-slot'),
     path('calendar/decide/', views.calendar_decide_slot, name='calendar-decide-slot'),
+    path('calendar/comment/', views.calendar_lesson_comment, name='calendar-lesson-comment'),
     path('calendar/book/', views.calendar_book_slot, name='calendar-book-slot'),
     path('calendar/cancel/', views.calendar_cancel_slot, name='calendar-cancel-slot'),
     path('students/', views.students_list, name='students-list'),
