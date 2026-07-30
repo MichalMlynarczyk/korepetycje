@@ -2467,28 +2467,32 @@ function TutorProfileCard({ tutor, isExpanded, isMobileExpanded, onToggleMobile 
 
 function ReviewsSection() {
   return (
-    <section id="opinie" className="bg-[#fbfaf7] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
+    <section id="opinie" className="bg-[#fffdf9] px-4 py-14 sm:px-6 sm:py-20 lg:px-10">
       <div className="mx-auto max-w-[86rem]">
         <div className="text-center">
           <p className="text-xs font-black uppercase tracking-[0.34em] text-[#8fc1b2]">
             Opinie
           </p>
-          <h2 className="mx-auto mt-2 max-w-3xl text-4xl font-black leading-tight text-slate-950 sm:text-6xl">
-            Co mówią
-            <span className="block text-[#07463f]">nasi uczniowie i rodzice</span>
+          <h2 className="relative mx-auto mt-2 inline-block text-4xl font-black leading-tight text-[#07463f] sm:text-6xl">
+            Co mówią nasi uczniowie i rodzice
+            <span className="absolute -bottom-1 left-2 h-2 w-[94%] rounded-full bg-[#f6c65f]" />
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-base font-medium leading-7 text-slate-600 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-2xl text-base font-medium leading-7 text-slate-700 sm:text-lg">
             Najlepszym potwierdzeniem jakości są spokojniejsze lekcje, lepsze oceny i większa pewność siebie przy matematyce.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {reviews.map((review) => (
+        <div className="mx-auto mt-12 grid max-w-6xl gap-8 lg:grid-cols-3 xl:gap-10">
+          {reviews.map((review, index) => (
             <article
               key={review.name}
-              className="flex min-h-[27rem] flex-col rounded-2xl border border-[#e2ddd5] bg-[#fffdf9] px-6 py-8 shadow-[0_18px_40px_rgba(15,23,42,0.06)] sm:px-8"
+              className={`flex min-h-[27rem] flex-col rounded-2xl border bg-[#fffdf9] px-6 py-8 shadow-[0_18px_40px_rgba(15,23,42,0.06)] transition duration-300 hover:border-[#b9afa3] hover:shadow-[0_24px_54px_rgba(15,23,42,0.14)] sm:px-8 ${
+                index === 1
+                  ? 'border-[#d7d0c7] shadow-[0_24px_54px_rgba(15,23,42,0.10)] lg:scale-[1.03] lg:hover:scale-[1.045]'
+                  : 'border-[#e2ddd5] hover:scale-[1.025]'
+              }`}
             >
-              <span className="text-7xl font-black leading-none text-[#cde4d8]" aria-hidden="true">
+              <span className="text-7xl font-extrabold leading-none text-[#cde4d8]" aria-hidden="true">
                 ”
               </span>
               <div className="mt-4 flex gap-2 text-[#f0b544]" aria-label="Ocena 5 na 5">
@@ -2496,24 +2500,15 @@ function ReviewsSection() {
                   <StarIcon key={index} className="h-5 w-5" />
                 ))}
               </div>
-              <p className="mt-7 flex-1 text-base font-medium leading-8 text-slate-600 sm:text-lg">
+              <p className="mt-7 flex-1 text-base font-normal leading-8 text-slate-600 sm:text-lg">
                 {review.text}
               </p>
               <div className="mt-8 border-t border-[#e2ddd5] pt-7">
-                <p className="text-xl font-black text-slate-950 sm:text-2xl">
+                <p className="text-xl font-semibold text-slate-950 sm:text-2xl">
                   {review.name}
                 </p>
               </div>
             </article>
-          ))}
-        </div>
-
-        <div className="mt-10 flex justify-center gap-3" aria-hidden="true">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <span
-              key={index}
-              className={`h-3 w-3 rounded-full ${index === 0 ? 'bg-[#07463f]' : 'bg-[#b7c1cc]'}`}
-            />
           ))}
         </div>
       </div>
