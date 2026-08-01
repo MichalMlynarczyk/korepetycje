@@ -61,7 +61,7 @@ ALLOWED_MATERIAL_CONTENT_TYPES = {
     'image/jpeg': '.jpg',
 }
 MAX_MATERIAL_SIZE = 15 * 1024 * 1024
-FREE_LESSON_DEADLINE = date(2026, 8, 14)
+FREE_LESSON_DEADLINE = date(2026, 8, 21)
 
 
 def _json_body(request):
@@ -207,7 +207,7 @@ def _send_free_lesson_lead_email(lead):
     local_created_at = timezone.localtime(lead.created_at)
     message = (
         'Nowe zgłoszenie z kuponu QR na darmową lekcję NaSTOmatMa.\n\n'
-        'Oferta: darmowa lekcja do 40 minut, ważna do 14.08.2026.\n\n'
+        'Oferta: darmowa lekcja do 40 minut, ważna do 21.08.2026.\n\n'
         f'ID zgłoszenia: {lead.id}\n'
         f'Data zgłoszenia: {local_created_at:%d.%m.%Y %H:%M}\n'
         f'Imię i nazwisko rodzica: {lead.parent_full_name}\n'
@@ -1427,7 +1427,7 @@ def free_lesson_lead(request):
         return JsonResponse({'error': 'Ten widok jest przeznaczony dla ucznia.'}, status=403)
 
     if timezone.localdate() > FREE_LESSON_DEADLINE:
-        return JsonResponse({'error': 'Promocja darmowej lekcji była ważna do 14.08.2026.'}, status=400)
+        return JsonResponse({'error': 'Promocja darmowej lekcji była ważna do 21.08.2026.'}, status=400)
 
     data = _json_body(request)
     if data is None:

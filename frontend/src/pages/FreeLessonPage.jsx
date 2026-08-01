@@ -27,7 +27,7 @@ const classOptions = [
 
 const highlights = [
   { icon: <ClockIcon />, title: 'Do 40 minut', text: 'lekcji próbnej' },
-  { icon: <CalendarIcon />, title: 'Do 14 sierpnia', text: '2026' },
+  { icon: <CalendarIcon />, title: 'Do 21 sierpnia', text: '2026' },
   { icon: <ShieldIcon />, title: 'Bez zobowiązań', text: '100% darmowe' },
 ];
 
@@ -94,21 +94,6 @@ export function FreeLessonPage({ user, onComplete }) {
   return (
     <div className="min-h-screen bg-[#fffdf9] text-[#0b4f47]">
       <div className="min-h-screen w-full overflow-hidden bg-[#fffdf9]">
-        <header className="border-b border-[#e7e2da] px-5 sm:px-10">
-          <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between">
-            <a href="/" className="text-xl font-black tracking-tight">
-              NaSTOmatMa
-            </a>
-            <nav className="hidden items-center gap-9 text-sm font-bold text-slate-700 md:flex">
-              <a href="/#o-nas" className="transition hover:text-[#007f6d]">O nas</a>
-              <a href="/#jak-to-dziala" className="transition hover:text-[#007f6d]">Jak to działa</a>
-              <a href="/#oferta" className="transition hover:text-[#007f6d]">Oferta</a>
-              <a href="/#cennik" className="transition hover:text-[#007f6d]">Cennik</a>
-              <a href="/#kontakt" className="transition hover:text-[#007f6d]">Kontakt</a>
-            </nav>
-          </div>
-        </header>
-
         <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-10 lg:px-16">
           <section className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
@@ -118,7 +103,7 @@ export function FreeLessonPage({ user, onComplete }) {
               <h1 className="max-w-xl text-4xl font-black leading-[1.05] tracking-normal sm:text-5xl lg:text-[64px]">
                 <span className="block text-[#07584f]">Darmowa lekcja</span>
                 <span className="block text-[#07584f]">matematyki</span>
-                <span className="block text-[#edb24b]">do 14 sierpnia</span>
+                <span className="block text-[#edb24b]">do 21 sierpnia</span>
               </h1>
               <p className="mt-6 max-w-xl text-base font-semibold leading-7 text-slate-700">
                 Skorzystaj z darmowej lekcji próbnej do 40 minut. Poznaj nasze metody nauczania
